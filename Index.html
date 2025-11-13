@@ -455,8 +455,19 @@
             if (isInHospital) {
                 // Hospital - only patients arriving from incidents
                 const baseIncidentType = incidentType.replace('Arrival', '');
-                const patientTypes = ['Ambulatory Patient', 'Stretcher Patient', 'Walking Wounded', 'Critical Patient'];
-                role = pickRandom(patientTypes);
+                // Use roles from the base incident type to avoid spoilers
+                const roleMap = {
+                    'RTC': ['Driver', 'Front Passenger', 'Rear Passenger', 'Cyclist', 'Pedestrian', 'Motorcyclist'],
+                    'Blast': ['Civilian', 'Shopper', 'Office Worker', 'Restaurant Diner'],
+                    'BuildingCollapse': ['Resident', 'Construction Worker', 'Visitor', 'Passer-by'],
+                    'Fire': ['Resident', 'Office Worker', 'Shop Customer', 'Shop Staff'],
+                    'MTFA': ['Shopper', 'Shop Worker', 'Tourist', 'Restaurant Diner'],
+                    'Chemical': ['Plant Worker', 'Lab Technician', 'Nearby Resident'],
+                    'IndustrialExplosion': ['Factory Worker', 'Shift Supervisor', 'Contractor'],
+                    'CrowdCrush': ['Spectator', 'Event Attendee', 'Vendor']
+                };
+                const roles = roleMap[baseIncidentType] || ['Patient'];
+                role = pickRandom(roles);
                 
                 // Some patients have pre-existing conditions affecting baseline obs
                 if (probability(30)) {
@@ -1404,7 +1415,16 @@
                 const explanation = isMitt ? explainMitt(currentCasualty) : explainTst(currentCasualty);
                 document.getElementById('explanationContent').innerHTML = explanation;
             } else {
-                resultHtml += `<p class="font-semibold text-gray-700">${message}</p></div>`;
+                // Test mode
+                resultHtml += `<p class="font-semibold ${isCorrect ? 'feedback-correct' : 'feedback-incorrect'}">${isCorrect ? '✓ Correct!' : `✗ Incorrect. Correct triage: ${correctPriority.toUpperCase()}`}</p></div>`;
+                // Show explanation if incorrect
+                if (!isCorrect) {
+                    document.getElementById('teachExplanation').classList.remove('hidden');
+                    const explanation = isMitt ? explainMitt(currentCasualty) : explainTst(currentCasualty);
+                    document.getElementById('explanationContent').innerHTML = explanation;
+                } else {
+                    document.getElementById('teachExplanation').classList.add('hidden');
+                }
             }
             
             document.getElementById('resultCard').innerHTML = resultHtml;
