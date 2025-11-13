@@ -105,12 +105,19 @@
         <div id="setupScreen" class="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
             <h2 class="text-2xl font-semibold mb-6 text-center">Create New Simulation</h2>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Training Mode</label>
                     <div id="modeSelector" class="flex border border-gray-300 rounded-lg overflow-hidden">
                         <button data-mode="teach" class="mode-button flex-1 p-3 font-semibold text-white bg-blue-600 transition-colors duration-200">Teach</button>
                         <button data-mode="test" class="mode-button flex-1 p-3 font-semibold text-gray-600 bg-gray-200 transition-colors duration-200">Test</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Environment</label>
+                    <div id="environmentSelector" class="flex border border-gray-300 rounded-lg overflow-hidden">
+                        <button data-environment="prehospital" class="environment-button flex-1 p-3 font-semibold text-white bg-blue-600 transition-colors duration-200">Pre-Hospital</button>
+                        <button data-environment="inhospital" class="environment-button flex-1 p-3 font-semibold text-gray-600 bg-gray-200 transition-colors duration-200">In-Hospital</button>
                     </div>
                 </div>
                 <div>
@@ -127,16 +134,7 @@
                 <div class="mb-6">
                     <label for="incidentType" class="block text-sm font-medium text-gray-700 mb-2">Type of Incident</label>
                     <select id="incidentType" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="RTC">Road Traffic Collision (RTC)</option>
-                        <option value="Train">Train Crash</option>
-                        <option value="HGV">HGV Incident</option>
-                        <option value="Blast">Blast Incident</option>
-                        <option value="BuildingCollapse">Building Collapse</option>
-                        <option value="IndustrialExplosion">Industrial Explosion</option>
-                        <option value="CrowdCrush">Stadium/Crowd Crush</option>
-                        <option value="Chemical">Chemical Incident (CBRN)</option>
-                        <option value="Fire">Major Fire</option>
-                        <option value="MTFA">Marauding Terrorist Firearms Attack (MTFA)</option>
+                        <!-- Options will be populated based on environment selection -->
                     </select>
                 </div>
                 
@@ -367,6 +365,7 @@
         const simSubtitle = document.getElementById('simSubtitle');
         const methaneReport = document.getElementById('methaneReport');
         const modeSelector = document.getElementById('modeSelector');
+        const environmentSelector = document.getElementById('environmentSelector');
         const systemSelector = document.getElementById('systemSelector');
         const timerDisplay = document.getElementById('timerDisplay');
         const timer = document.getElementById('timer');
@@ -416,23 +415,67 @@
         let casualties = [];
         let currentCasualty = null;
         let currentMode = 'teach'; // 'teach' or 'test'
+        let currentEnvironment = 'prehospital'; // 'prehospital' or 'inhospital'
         let triageSystem = 'tst_mitt'; // 'tst', 'tst_mitt', or 'mitt'
         let currentPhase = 'tst'; // 'tst' or 'mitt'
         let timerInterval = null;
         let secondsElapsed = 0;
+
+        // Incident types by environment
+        const incidentTypes = {
+            prehospital: [
+                { value: 'RTC', label: 'Road Traffic Collision (RTC)' },
+                { value: 'Train', label: 'Train Crash' },
+                { value: 'HGV', label: 'HGV Incident' },
+                { value: 'Blast', label: 'Blast Incident' },
+                { value: 'BuildingCollapse', label: 'Building Collapse' },
+                { value: 'IndustrialExplosion', label: 'Industrial Explosion' },
+                { value: 'CrowdCrush', label: 'Stadium/Crowd Crush' },
+                { value: 'Chemical', label: 'Chemical Incident (CBRN)' },
+                { value: 'Fire', label: 'Major Fire' },
+                { value: 'MTFA', label: 'Marauding Terrorist Firearms Attack (MTFA)' }
+            ],
+            inhospital: [
+                { value: 'HospitalFire', label: 'Hospital Fire' },
+                { value: 'HospitalChemical', label: 'Hospital Chemical Spill' },
+                { value: 'HospitalMTFA', label: 'Active Assailant in Hospital' },
+                { value: 'MassCasualtyArrival', label: 'Mass Casualty Arrival at ED' },
+                { value: 'HospitalBlast', label: 'Explosion Affecting Hospital' },
+                { value: 'HospitalCollapse', label: 'Structural Collapse in Hospital' },
+                { value: 'InfectionOutbreak', label: 'Infectious Disease Outbreak' },
+                { value: 'UtilityFailure', label: 'Major Utility Failure (Power/Oxygen)' }
+            ]
+        };
+        
+        // Update incident types dropdown based on environment
+        const updateIncidentTypes = (environment) => {
+            const incidents = incidentTypes[environment];
+            incidentTypeSelect.innerHTML = incidents.map(inc => 
+                `<option value="${inc.value}">${inc.label}</option>`
+            ).join('');
+            // Trigger the vehicle count visibility check
+            incidentTypeSelect.dispatchEvent(new Event('change'));
+        };
+        
+        // Initialise with pre-hospital incidents
+        updateIncidentTypes('prehospital');
         
         // --- Utility Functions ---
         const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
         const probability = (percent) => Math.random() < (percent / 100);
         const pickRandom = (arr) => arr[getRandomInt(0, arr.length - 1)];
 
-        // Incidents that should show vehicle count
+        // Incidents that should show vehicle count (only pre-hospital)
         const vehicleIncidents = ['RTC', 'Train'];
         
         // Update vehicle count visibility when incident type changes
         incidentTypeSelect.addEventListener('change', () => {
             const incidentType = incidentTypeSelect.value;
-            if (vehicleIncidents.includes(incidentType)) {
+            const isInHospital = ['HospitalFire', 'HospitalChemical', 'HospitalMTFA', 'MassCasualtyArrival', 
+                                   'HospitalBlast', 'HospitalCollapse', 'InfectionOutbreak', 'UtilityFailure'].includes(incidentType);
+            
+            // Only show vehicle count for specific pre-hospital incidents
+            if (!isInHospital && vehicleIncidents.includes(incidentType)) {
                 vehicleCountContainer.classList.remove('hidden');
                 const label = vehicleCountContainer.querySelector('label');
                 label.textContent = incidentType === 'Train' ? 'Number of Carriages' : 'Number of Vehicles';
@@ -464,28 +507,69 @@
             }
             conscious = 'Alert';
 
-            // Incident-specific roles
-            const roles = { 
-                RTC: ['Driver', 'Front Passenger', 'Rear Passenger', 'Pedestrian', 'Motorcyclist'], 
-                Train: ['Passenger', 'Train Staff', 'Platform Bystander'], 
-                HGV: ['HGV Driver', 'Warehouse Staff', 'Bystander'], 
-                Blast: ['Nearby Civilian', 'Shopper', 'Office Worker', 'First Responder'],
-                BuildingCollapse: ['Resident', 'Construction Worker', 'Visitor', 'Passer-by'],
-                IndustrialExplosion: ['Factory Worker', 'Maintenance Staff', 'Supervisor', 'Security Guard'],
-                CrowdCrush: ['Spectator', 'Steward', 'Vendor', 'Security Staff'],
-                Chemical: ['Plant Worker', 'First Responder', 'Nearby Resident'], 
-                Fire: ['Resident', 'Office Worker', 'Visitor', 'Shop Staff'], 
-                MTFA: ['Shopper', 'Shop Worker', 'Tourist', 'Police Officer']
-            };
-            const role = pickRandom(roles[incidentType] || ['Civilian']);
+            // Environment-specific roles and context
+            const isInHospital = ['HospitalFire', 'HospitalChemical', 'HospitalMTFA', 'MassCasualtyArrival', 
+                                   'HospitalBlast', 'HospitalCollapse', 'InfectionOutbreak', 'UtilityFailure'].includes(incidentType);
+            
+            let role, preExistingCondition = null;
+            
+            if (isInHospital) {
+                // Hospital roles with some casualties having pre-existing conditions
+                const hospitalRoles = [
+                    { role: 'Inpatient', hasCondition: 0.8 },
+                    { role: 'ED Patient', hasCondition: 0.6 },
+                    { role: 'Outpatient', hasCondition: 0.4 },
+                    { role: 'Visitor', hasCondition: 0.1 },
+                    { role: 'Doctor', hasCondition: 0 },
+                    { role: 'Nurse', hasCondition: 0 },
+                    { role: 'Healthcare Assistant', hasCondition: 0 },
+                    { role: 'Porter', hasCondition: 0 },
+                    { role: 'Radiographer', hasCondition: 0 },
+                    { role: 'Pharmacist', hasCondition: 0 }
+                ];
+                
+                const selectedRole = pickRandom(hospitalRoles);
+                role = selectedRole.role;
+                
+                // Some casualties have pre-existing conditions affecting baseline obs
+                if (probability(selectedRole.hasCondition * 100)) {
+                    const conditions = [
+                        { name: 'COPD', respEffect: () => { resps = getRandomInt(20, 30); } },
+                        { name: 'Heart Failure', respEffect: () => { resps = getRandomInt(20, 28); pulse = getRandomInt(85, 110); } },
+                        { name: 'Post-operative', respEffect: () => { pulse = getRandomInt(70, 95); } },
+                        { name: 'Pneumonia', respEffect: () => { resps = getRandomInt(22, 32); pulse = getRandomInt(90, 120); } },
+                        { name: 'MI', respEffect: () => { pulse = getRandomInt(60, 100); } }
+                    ];
+                    const condition = pickRandom(conditions);
+                    preExistingCondition = condition.name;
+                    if (age > 50 && role.includes('patient')) { // Apply baseline changes for older patients
+                        condition.respEffect();
+                    }
+                }
+            } else {
+                // Pre-hospital roles
+                const roles = { 
+                    RTC: ['Driver', 'Front Passenger', 'Rear Passenger', 'Pedestrian', 'Motorcyclist'], 
+                    Train: ['Passenger', 'Train Staff', 'Platform Bystander'], 
+                    HGV: ['HGV Driver', 'Warehouse Staff', 'Bystander'], 
+                    Blast: ['Nearby Civilian', 'Shopper', 'Office Worker', 'First Responder'],
+                    BuildingCollapse: ['Resident', 'Construction Worker', 'Visitor', 'Passer-by'],
+                    IndustrialExplosion: ['Factory Worker', 'Maintenance Staff', 'Supervisor', 'Security Guard'],
+                    CrowdCrush: ['Spectator', 'Steward', 'Vendor', 'Security Staff'],
+                    Chemical: ['Plant Worker', 'First Responder', 'Nearby Resident'], 
+                    Fire: ['Resident', 'Office Worker', 'Visitor', 'Shop Staff'], 
+                    MTFA: ['Shopper', 'Shop Worker', 'Tourist', 'Police Officer']
+                };
+                role = pickRandom(roles[incidentType] || ['Civilian']);
+            }
 
             let injuries = [], injuryDescription = '';
 
             // Incident-specific injury patterns
-            const potentialInjuries = getInjuriesForIncident(incidentType);
+            const potentialInjuries = getInjuriesForIncident(incidentType, isInHospital);
             
             if (canWalk) {
-                injuryDescription = getMinorInjuryDescription(incidentType);
+                injuryDescription = getMinorInjuryDescription(incidentType, isInHospital, role, preExistingCondition);
             } else {
                 const severity = Math.random();
                 if (severity < 0.1) { // Critical - not breathing
@@ -501,7 +585,7 @@
                     if(probability(30)) injuries.push(pickRandom(potentialInjuries.filter(i => i.type === 'bleeding')));
                 } else { // Entrapment/spinal
                     conscious = 'Alert';
-                    injuryDescription = getEntrapmentDescription(incidentType);
+                    injuryDescription = getEntrapmentDescription(incidentType, isInHospital, role);
                 }
                 if(injuries.length > 0) {
                     injuryDescription = injuries.map(i => i.desc).join(' ');
@@ -523,12 +607,13 @@
                 userTstTriage: null, userMittTriage: null, 
                 correctTst: null, correctMitt: null, 
                 injuryDescription, hasSevereBleeding, isTalking, 
-                hasPenetratingInjury, hasCatastrophicBleeding 
+                hasPenetratingInjury, hasCatastrophicBleeding,
+                preExistingCondition
             };
         };
 
         // Get incident-appropriate injuries
-        const getInjuriesForIncident = (incidentType) => {
+        const getInjuriesForIncident = (incidentType, isInHospital) => {
             const baseInjuries = [
                 { type: 'head', location: 'head', desc: 'Significant head trauma evident.' },
                 { type: 'bleeding', location: 'leg', desc: 'Deep laceration to the leg.' },
@@ -537,6 +622,62 @@
                 { type: 'fracture', location: 'arm', desc: 'Deformed and swollen arm.' },
             ];
 
+            // In-hospital incident injury patterns
+            if (isInHospital) {
+                const hospitalIncidents = {
+                    HospitalFire: [
+                        { type: 'critical', location: 'chest', desc: 'Severe smoke inhalation with respiratory distress.' },
+                        { type: 'burns', location: 'torso', desc: 'Burns to arms and face from fire.' },
+                        { type: 'severe', location: 'chest', desc: 'Soot in airways, stridor developing.' },
+                        { type: 'fracture', location: 'leg', desc: 'Fall injury during evacuation with ankle fracture.' }
+                    ],
+                    HospitalChemical: [
+                        { type: 'critical', location: 'chest', desc: 'Chemical inhalation with bronchospasm.' },
+                        { type: 'burns', location: 'torso', desc: 'Chemical burns to exposed skin.' },
+                        { type: 'severe', location: 'chest', desc: 'Respiratory distress from fume exposure.' },
+                        { type: 'moderate', location: 'head', desc: 'Eye exposure with severe pain and lacrimation.' }
+                    ],
+                    HospitalMTFA: [
+                        { type: 'penetrating', location: 'chest', desc: 'Stab wound to chest.' },
+                        { type: 'penetrating', location: 'abdomen', desc: 'Penetrating abdominal injury.' },
+                        { type: 'bleeding', location: 'arm', desc: 'Defensive slash wound with arterial bleeding.' },
+                        { type: 'severe', location: 'head', desc: 'Blunt head trauma from assault.' }
+                    ],
+                    MassCasualtyArrival: [
+                        { type: 'severe', location: 'chest', desc: 'Blast lung injury from external incident.' },
+                        { type: 'penetrating', location: 'torso', desc: 'Penetrating injury with ongoing bleeding.' },
+                        { type: 'burns', location: 'torso', desc: 'Extensive burns requiring urgent care.' },
+                        { type: 'fracture', location: 'leg', desc: 'Multiple fractures from crush injury.' },
+                        { type: 'critical', location: 'head', desc: 'Severe head injury with dropping GCS.' }
+                    ],
+                    HospitalBlast: [
+                        { type: 'severe', location: 'chest', desc: 'Primary blast injury with haemoptysis.' },
+                        { type: 'penetrating', location: 'abdomen', desc: 'Penetrating injuries from flying glass.' },
+                        { type: 'bleeding', location: 'leg', desc: 'Traumatic amputation with catastrophic bleeding.' },
+                        { type: 'critical', location: 'head', desc: 'Blast-related TBI with decreasing consciousness.' }
+                    ],
+                    HospitalCollapse: [
+                        { type: 'severe', location: 'chest', desc: 'Crush injury from falling ceiling.' },
+                        { type: 'fracture', location: 'leg', desc: 'Bilateral lower limb fractures from entrapment.' },
+                        { type: 'critical', location: 'head', desc: 'Head injury from falling debris.' },
+                        { type: 'severe', location: 'abdomen', desc: 'Abdominal crush injury.' }
+                    ],
+                    InfectionOutbreak: [
+                        { type: 'critical', location: 'chest', desc: 'Severe respiratory infection with hypoxia.' },
+                        { type: 'severe', location: 'chest', desc: 'Septic shock with multi-organ dysfunction.' },
+                        { type: 'moderate', location: 'abdomen', desc: 'Gastrointestinal infection with dehydration.' }
+                    ],
+                    UtilityFailure: [
+                        { type: 'critical', location: 'chest', desc: 'Respiratory failure due to oxygen supply loss.' },
+                        { type: 'severe', location: 'chest', desc: 'Deterioration of existing respiratory condition.' },
+                        { type: 'moderate', location: 'head', desc: 'Fall in darkness with head injury.' }
+                    ]
+                };
+                
+                return [...baseInjuries, ...(hospitalIncidents[incidentType] || [])];
+            }
+
+            // Pre-hospital incident patterns
             const incidentSpecific = {
                 RTC: [
                     { type: 'severe', location: 'chest', desc: 'Flail chest with respiratory distress.' },
@@ -601,7 +742,82 @@
             return [...baseInjuries, ...(incidentSpecific[incidentType] || [])];
         };
 
-        const getMinorInjuryDescription = (incidentType) => {
+        const getMinorInjuryDescription = (incidentType, isInHospital, role, preExistingCondition) => {
+            if (isInHospital) {
+                const hospitalDescriptions = {
+                    HospitalFire: [
+                        "Minor smoke inhalation, coughing but ambulant.",
+                        "Superficial burns to hand from door handle.",
+                        "Anxious and distressed but no physical injuries.",
+                        role.includes('patient') && preExistingCondition ? 
+                            `Known ${preExistingCondition}, mobile with assistance during evacuation.` : 
+                            "Evacuated safely with minor cuts from broken glass."
+                    ],
+                    HospitalChemical: [
+                        "Eye irrigation completed, vision improving, mobile.",
+                        "Skin exposure with erythema, decontaminated, walking.",
+                        "Mild respiratory irritation, improving with oxygen.",
+                        role.includes('patient') ? 
+                            `Pre-existing ${preExistingCondition || 'condition'}, concerned but stable and mobile.` : 
+                            "Staff member with minor exposure, ambulant."
+                    ],
+                    HospitalMTFA: [
+                        "Witnessed incident, shocked but physically unharmed.",
+                        "Minor defensive injury to hand, walking.",
+                        "Hiding during incident, minor soft tissue injury from fall.",
+                        role === 'Nurse' || role === 'Doctor' ? 
+                            "Staff member, treating others despite minor injuries." : 
+                            "Patient evacuated to safety, mobile with assistance."
+                    ],
+                    MassCasualtyArrival: [
+                        role.includes('Staff') || role === 'Doctor' || role === 'Nurse' ?
+                            "Healthcare worker, fatigued but continuing to assist." :
+                            "Walking wounded triaged and mobile, awaiting secondary assessment.",
+                        role.includes('patient') ? 
+                            `Original ED patient with ${preExistingCondition || 'minor complaint'}, stable and mobile.` :
+                            "Minor injuries from incident, self-presented.",
+                        "Worried relative helping with translations, physically well."
+                    ],
+                    HospitalBlast: [
+                        "Hearing loss and tinnitus from blast, mobile.",
+                        "Minor lacerations from flying glass, walking.",
+                        "Blast exposure with tympanic membrane rupture, ambulant.",
+                        role.includes('patient') ? 
+                            `Ward patient evacuated during blast, ${preExistingCondition || 'condition'} stable.` : 
+                            "Staff member with minor blast injuries, continuing to help."
+                    ],
+                    HospitalCollapse: [
+                        "Escaped before major collapse, minor debris injuries.",
+                        "Dust inhalation and coughing, mobile.",
+                        "Minor crush injury to foot but weight-bearing.",
+                        role.includes('patient') ? 
+                            `Evacuated patient with ${preExistingCondition || 'pre-existing condition'}, ambulant with aid.` : 
+                            "Staff member with minor injuries from evacuation."
+                    ],
+                    InfectionOutbreak: [
+                        role.includes('patient') ? 
+                            `Mild symptoms of infection, isolation precautions, mobile.` :
+                            "Healthcare worker with mild symptoms, self-isolating.",
+                        "Early infection symptoms, ambulant and stable.",
+                        "Exposed but asymptomatic, walking for screening."
+                    ],
+                    UtilityFailure: [
+                        role.includes('patient') ? 
+                            `Known ${preExistingCondition || 'condition'}, temporarily stable, mobile to safe area.` :
+                            "Staff member coordinating evacuation, physically well.",
+                        "Anxious about power loss but physically unharmed.",
+                        "Minor stumble in darkness, mobile with torch assistance."
+                    ]
+                };
+                
+                const options = hospitalDescriptions[incidentType] || [
+                    "Minor injuries, walking and alert.",
+                    role.includes('patient') ? `Hospital patient with ${preExistingCondition || 'stable condition'}, mobile.` : "Staff member assisting with incident response."
+                ];
+                return pickRandom(options.filter(Boolean));
+            }
+
+            // Pre-hospital descriptions
             const descriptions = {
                 RTC: ["Minor whiplash with neck pain but mobile.", "Superficial lacerations from broken glass.", "Complaining of chest pain from seatbelt but walking."],
                 Train: ["Shaken with minor bruising from being thrown.", "Scalp laceration but alert and mobile.", "Twisted ankle but able to weight bear."],
@@ -619,7 +835,27 @@
             return pickRandom(options);
         };
 
-        const getEntrapmentDescription = (incidentType) => {
+        const getEntrapmentDescription = (incidentType, isInHospital, role) => {
+            if (isInHospital) {
+                const hospitalDescriptions = {
+                    HospitalFire: role.includes('patient') ? 
+                        "Bedridden patient unable to evacuate, alert but immobile." :
+                        "Trapped in stairwell by smoke, cannot move due to suspected spinal injury.",
+                    HospitalChemical: "Exposed to concentrated chemical, collapsed and unable to move lower limbs.",
+                    HospitalMTFA: "Hiding and afraid to move, suspected penetrating spinal injury.",
+                    HospitalBlast: "Pinned by collapsed wall section, alert but cannot move.",
+                    HospitalCollapse: role.includes('patient') ? 
+                        "Bed collapsed during structural failure, trapped underneath." :
+                        "Trapped under fallen ceiling panels, complaining of severe back pain.",
+                    InfectionOutbreak: "Severely unwell and bedbound, unable to mobilise due to weakness.",
+                    UtilityFailure: role.includes('patient') ? 
+                        "Ventilator-dependent patient, unable to move without assistance." :
+                        "Trapped in lift during power failure, cannot get out."
+                };
+                return hospitalDescriptions[incidentType] || "Unable to move, suspected spinal injury.";
+            }
+
+            // Pre-hospital descriptions
             const descriptions = {
                 RTC: "Trapped in vehicle wreckage, alert but unable to move lower limbs.",
                 Train: "Pinned by carriage debris, complaining of severe back pain.",
@@ -774,6 +1010,7 @@
                              <p class="text-sm text-gray-600 italic">"${c.injuryDescription}"</p>
                              <div class="mt-2 pt-2 border-t border-gray-200 text-xs space-y-1">
                                 <p><strong>Details:</strong> ${c.age} y/o ${c.sex}, ${c.role}</p>
+                                ${c.preExistingCondition ? `<p><strong>PMHx:</strong> ${c.preExistingCondition}</p>` : ''}
                                 <p><strong>Talking:</strong> <span class="${c.isTalking ? 'text-green-700' : 'text-red-700'}">${c.isTalking ? 'Yes' : 'No'}</span></p>
                                 <p><strong>Resps:</strong> ${c.isBreathing ? c.resps + '/min' : 'Not Breathing (Initially)'}</p>
                                 ${!c.isBreathing ? `<p class="pl-2"><strong>&hookrightarrow; After Airway:</strong> <span class="${c.airwayClears ? 'text-green-700' : 'text-red-700'}">${c.airwayClears ? 'Breathing' : 'Apnoeic'}</span></p>` : ''}
@@ -876,6 +1113,64 @@
         };
 
         const generateMethaneReport = (incidentType, vehicleCount, casualtyCount) => {
+            const isInHospital = ['HospitalFire', 'HospitalChemical', 'HospitalMTFA', 'MassCasualtyArrival', 
+                                   'HospitalBlast', 'HospitalCollapse', 'InfectionOutbreak', 'UtilityFailure'].includes(incidentType);
+            
+            if (isInHospital) {
+                // Hospital-specific briefing
+                const locations = {
+                    HospitalFire: "Ward 7B, Third Floor, Main Hospital Building",
+                    HospitalChemical: "Clinical Chemistry Laboratory, Ground Floor",
+                    HospitalMTFA: "Emergency Department Main Waiting Area",
+                    MassCasualtyArrival: "Emergency Department Ambulance Bay",
+                    HospitalBlast: "Hospital Car Park and Adjacent Outpatient Clinic",
+                    HospitalCollapse: "East Wing Corridor, Floors 4-5",
+                    InfectionOutbreak: "Multiple Wards - Respiratory Isolation Area",
+                    UtilityFailure: "Entire Hospital Site - Main Building and Annexes"
+                };
+
+                const hazards = {
+                    HospitalFire: "Smoke throughout corridor, fire doors activated, oxygen cylinders in area, electrical hazards.",
+                    HospitalChemical: "Toxic fumes, contaminated staff and patients, ventilation system compromised.",
+                    HospitalMTFA: "Armed individual contained in secure area, ongoing police operation, staff and patients at risk.",
+                    MassCasualtyArrival: "Overwhelmed resources, contaminated casualties, secondary triage needed, staff fatigue.",
+                    HospitalBlast: "Structural instability, glass debris throughout, potential secondary device, utilities damaged.",
+                    HospitalCollapse: "Ongoing structural failure risk, dust cloud, trapped casualties, electrical hazards.",
+                    InfectionOutbreak: "Infectious disease transmission risk, PPE required, staff shortages, isolation breaches.",
+                    UtilityFailure: "Life support equipment failing, no lighting in some areas, temperature control lost, trapped in lifts."
+                };
+
+                const access = {
+                    HospitalFire: "Fire doors sealed off affected area. Access via Ward 7A. Liaise with Fire Service on scene.",
+                    HospitalChemical: "Decontamination area established at east entrance. Do not enter lab. RVP at hospital main entrance.",
+                    HospitalMTFA: "Police incident. Do not approach ED front entrance. Staff access via staff entrance only.",
+                    MassCasualtyArrival: "ED at capacity. Divert routine cases. Overflow to Day Surgery Unit. Senior ED Consultant coordinating.",
+                    HospitalBlast: "Evacuate via south exit only. North wing structurally unsafe. RVP at hospital chapel.",
+                    HospitalCollapse: "East wing evacuated. Use west corridor only. Fire and Rescue conducting search.",
+                    InfectionOutbreak: "Full PPE required. Use designated clean corridor. Follow infection control guidance.",
+                    UtilityFailure: "Emergency lighting only. Use stairs not lifts. Generator providing critical areas only."
+                };
+
+                const incidentNames = {
+                    HospitalFire: 'Hospital fire',
+                    HospitalChemical: 'Hospital chemical spill',
+                    HospitalMTFA: 'Active assailant incident',
+                    MassCasualtyArrival: 'Mass casualty arrival',
+                    HospitalBlast: 'Explosion affecting hospital',
+                    HospitalCollapse: 'Hospital structural collapse',
+                    InfectionOutbreak: 'Infectious disease outbreak',
+                    UtilityFailure: 'Major utility failure'
+                };
+
+                return {
+                    location: locations[incidentType],
+                    type: incidentNames[incidentType],
+                    hazards: hazards[incidentType],
+                    access: access[incidentType]
+                };
+            }
+
+            // Pre-hospital METHANE reports
             const locations = { 
                 RTC: "Junction 15, M1 Motorway", 
                 Train: "Watford West Station", 
@@ -1008,6 +1303,7 @@
                 <div><strong>Age:</strong> ${casualty.age}</div>
                 <div><strong>Sex:</strong> ${casualty.sex}</div>
                 <div class="col-span-2"><strong>Role:</strong> ${casualty.role}</div>
+                ${casualty.preExistingCondition ? `<div class="col-span-2"><strong>Past Medical History:</strong> ${casualty.preExistingCondition}</div>` : ''}
                 <div><strong>Cat. Bleed:</strong> <span class="${casualty.hasCatastrophicBleeding ? 'text-red-700 font-semibold' : ''}">${casualty.hasCatastrophicBleeding ? 'Yes' : 'No'}</span></div>
                 <div><strong>Talking:</strong> <span class="${casualty.isTalking ? 'text-green-700 font-semibold' : 'text-red-700 font-semibold'}">${casualty.isTalking ? 'Yes' : 'No'}</span></div>
                 <div><strong>Mobility:</strong> <span class="${casualty.canWalk ? 'text-green-700 font-semibold' : 'text-red-700 font-semibold'}">${casualty.canWalk ? 'Walking' : 'Not Walking'}</span></div>
@@ -1168,13 +1464,17 @@
         });
 
         // Setup Screen Selectors
-        [modeSelector, systemSelector].forEach(selector => {
+        [modeSelector, environmentSelector, systemSelector].forEach(selector => {
             selector.addEventListener('click', (e) => {
                 if (e.target.tagName === 'BUTTON') {
                     const type = selector.id.replace('Selector', '');
                     const value = e.target.dataset[type];
 
                     if (type === 'mode') currentMode = value;
+                    if (type === 'environment') {
+                        currentEnvironment = value;
+                        updateIncidentTypes(value);
+                    }
                     if (type === 'system') triageSystem = value;
                     
                     selector.querySelectorAll('button').forEach(btn => {
