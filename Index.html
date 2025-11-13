@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TST & MITT Triage Training Simulator</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -88,6 +89,53 @@
             animation: flash-red 1.5s ease-in-out;
         }
 
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .triage-button, 
+            button[data-answer],
+            button[data-triage-choice] {
+                min-height: 3.5rem;
+                font-size: 1rem;
+                touch-action: manipulation;
+            }
+            
+            .casualty-card {
+                touch-action: pan-y;
+            }
+            
+            .modal-content {
+                width: 95%;
+                max-height: 85vh;
+            }
+        }
+
+        /* Speed round timer bar */
+        .timer-bar {
+            height: 4px;
+            background: linear-gradient(to right, #22c55e 0%, #f59e0b 50%, #ef4444 100%);
+            transition: width 1s linear;
+        }
+
+        /* Swipe indicator */
+        .swipe-indicator {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            z-index: 40;
+            animation: fadeInOut 2s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -105,7 +153,7 @@
         <div id="setupScreen" class="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
             <h2 class="text-2xl font-semibold mb-6 text-center">Create New Simulation</h2>
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Training Mode</label>
                     <div id="modeSelector" class="flex border border-gray-300 rounded-lg overflow-hidden">
@@ -120,13 +168,26 @@
                         <button data-environment="inhospital" class="environment-button flex-1 p-3 font-semibold text-gray-600 bg-gray-200 transition-colors duration-200">In-Hospital</button>
                     </div>
                 </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Triage System</label>
                     <div id="systemSelector" class="flex border border-gray-300 rounded-lg overflow-hidden">
-                        <button data-system="tst_mitt" class="system-button flex-1 p-2 md:p-3 text-sm md:text-base font-semibold text-white bg-blue-600 transition-colors duration-200">TST & MITT</button>
-                        <button data-system="tst" class="system-button flex-1 p-2 md:p-3 text-sm md:text-base font-semibold text-gray-600 bg-gray-200 transition-colors duration-200">TST Only</button>
-                        <button data-system="mitt" class="system-button flex-1 p-2 md:p-3 text-sm md:text-base font-semibold text-gray-600 bg-gray-200 transition-colors duration-200">MITT Only</button>
+                        <button data-system="tst_mitt" class="system-button flex-1 p-2 text-sm font-semibold text-white bg-blue-600 transition-colors duration-200">TST & MITT</button>
+                        <button data-system="tst" class="system-button flex-1 p-2 text-sm font-semibold text-gray-600 bg-gray-200 transition-colors duration-200">TST Only</button>
+                        <button data-system="mitt" class="system-button flex-1 p-2 text-sm font-semibold text-gray-600 bg-gray-200 transition-colors duration-200">MITT Only</button>
                     </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Training Focus</label>
+                    <select id="trainingFocus" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="standard">Standard</option>
+                        <option value="paediatric">Paediatric Focus (70% children)</option>
+                        <option value="burns">Burns Focus (Fire/Explosion)</option>
+                        <option value="cbrn">CBRN Focus (Chemical Incidents)</option>
+                        <option value="speed">Speed Round (30s per casualty)</option>
+                    </select>
                 </div>
             </div>
 
@@ -173,6 +234,23 @@
             <div id="phaseDisplay" class="hidden bg-amber-100 border-l-4 border-amber-600 p-4 mb-4 rounded-lg">
                 <p id="phaseText" class="font-semibold text-amber-800"></p>
                 <button id="startMittButton" class="hidden mt-2 bg-amber-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-700">Start MITT Phase</button>
+            </div>
+
+            <div id="speedRoundTimer" class="hidden bg-red-100 border-l-4 border-red-600 p-4 mb-4 rounded-lg">
+                <div class="flex justify-between items-center mb-2">
+                    <p class="font-semibold text-red-800">Casualty Time Remaining: <span id="casualtyTimer" class="font-mono text-2xl">30</span>s</p>
+                    <button id="skipCasualtyButton" class="bg-red-600 text-white font-semibold py-1 px-3 rounded hover:bg-red-700">Skip</button>
+                </div>
+                <div class="w-full bg-gray-300 rounded-full h-2 overflow-hidden">
+                    <div id="speedTimerBar" class="timer-bar h-full" style="width: 100%"></div>
+                </div>
+            </div>
+
+            <div class="mb-4 flex justify-between items-center">
+                <label class="flex items-center cursor-pointer">
+                    <input type="checkbox" id="showClinicalImages" class="mr-2 h-4 w-4">
+                    <span class="text-sm font-medium text-gray-700">Show Clinical Findings</span>
+                </label>
             </div>
 
             <div id="methaneReport" class="bg-red-100 border-l-4 border-red-600 p-4 mb-6 rounded-lg text-sm">
@@ -304,8 +382,8 @@
                     <button id="closeImageModalButton" class="text-2xl font-bold">&times;</button>
                 </div>
                 <div class="flex flex-col gap-4">
-                    <img src="https://iili.io/2ZM1SUl.md.jpg" alt="TST Algorithm" class="w-full rounded-lg">
-                    <img src="https://iili.io/2ZM1bFs.md.jpg" alt="MITT Algorithm" class="w-full rounded-lg">
+                    <img src="images/TST.png" alt="TST Algorithm" class="w-full rounded-lg">
+                    <img src="images/MITT.png" alt="MITT Algorithm" class="w-full rounded-lg">
                 </div>
             </div>
         </div>
@@ -317,7 +395,10 @@
                 </div>
                 <div id="reportContent">
                 </div>
-                <button id="closeReportButton" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 mt-4">Close & Return to Menu</button>
+                <div class="flex gap-2 mt-4">
+                    <button id="downloadPdfButton" class="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700">📄 Download PDF Certificate</button>
+                    <button id="closeReportButton" class="flex-1 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700">Close & Return to Menu</button>
+                </div>
             </div>
         </div>
     </div>
@@ -351,6 +432,13 @@
         const modeSelector = document.getElementById('modeSelector');
         const environmentSelector = document.getElementById('environmentSelector');
         const systemSelector = document.getElementById('systemSelector');
+        const trainingFocusSelect = document.getElementById('trainingFocus');
+        const speedRoundTimer = document.getElementById('speedRoundTimer');
+        const casualtyTimer = document.getElementById('casualtyTimer');
+        const speedTimerBar = document.getElementById('speedTimerBar');
+        const skipCasualtyButton = document.getElementById('skipCasualtyButton');
+        const showClinicalImagesCheckbox = document.getElementById('showClinicalImages');
+        const downloadPdfButton = document.getElementById('downloadPdfButton');
         
         // --- State Variables ---
         let casualties = [];
@@ -361,6 +449,12 @@
         let currentPhase = 'tst'; // 'tst' or 'mitt'
         let timerInterval = null;
         let secondsElapsed = 0;
+        let trainingFocus = 'standard'; // 'standard', 'paediatric', 'burns', 'cbrn', 'speed'
+        let showClinicalImages = false;
+        let speedRoundInterval = null;
+        let casualtyTimeRemaining = 30;
+        let currentCasualtyIndex = 0;
+        let simulationStartTime = null;
 
         // Incident types by environment
         const incidentTypes = {
@@ -431,8 +525,12 @@
             const sex = pickRandom(['Male', 'Female']);
             let age, resps, pulse, conscious;
             
+            // Adjust paediatric probability based on training focus
+            let paediatricProbability = 15;
+            if (trainingFocus === 'paediatric') paediatricProbability = 70;
+            
             // Paediatric Vitals
-            const randomAge = probability(15) ? getRandomInt(0, 12) : getRandomInt(13, 80);
+            const randomAge = probability(paediatricProbability) ? getRandomInt(0, 12) : getRandomInt(13, 80);
             age = randomAge;
             if (age <= 1) { // Infant
                 resps = getRandomInt(30, 60); pulse = getRandomInt(100, 160);
@@ -1139,8 +1237,16 @@
 
         // --- Simulation Control ---
         const startSimulation = () => {
-            const incidentType = incidentTypeSelect.value;
+            trainingFocus = trainingFocusSelect.value;
+            let incidentType = incidentTypeSelect.value;
             const casualtyCount = parseInt(casualtyCountInput.value);
+            
+            // Override incident type for focused training
+            if (trainingFocus === 'burns') {
+                incidentType = currentEnvironment === 'prehospital' ? 'Fire' : 'FireArrival';
+            } else if (trainingFocus === 'cbrn') {
+                incidentType = currentEnvironment === 'prehospital' ? 'Chemical' : 'ChemicalArrival';
+            }
             
             const incidentLabel = incidentTypes[currentEnvironment].find(i => i.value === incidentType).label;
             
@@ -1155,7 +1261,13 @@
             setupScreen.classList.add('hidden');
             simulationScreen.classList.remove('hidden');
             simTitle.textContent = incidentLabel;
-            simSubtitle.textContent = `Triage ${casualtyCount} casualties using ${triageSystem === 'tst_mitt' ? 'TST & MITT' : triageSystem.toUpperCase()}`;
+            
+            let subtitle = `Triage ${casualtyCount} casualties using ${triageSystem === 'tst_mitt' ? 'TST & MITT' : triageSystem.toUpperCase()}`;
+            if (trainingFocus === 'paediatric') subtitle += ' - Paediatric Focus';
+            else if (trainingFocus === 'burns') subtitle += ' - Burns Focus';
+            else if (trainingFocus === 'cbrn') subtitle += ' - CBRN Focus';
+            else if (trainingFocus === 'speed') subtitle += ' - Speed Round (30s per casualty)';
+            simSubtitle.textContent = subtitle;
             
             // Show phase display and timer for specific systems
             if (triageSystem === 'tst_mitt' || triageSystem === 'mitt' || triageSystem === 'tst') {
@@ -1172,10 +1284,19 @@
                 }
             }
 
-            // Show timer in test mode
-            if (currentMode === 'test') {
+            // Show timer in test mode or speed round
+            if (currentMode === 'test' || trainingFocus === 'speed') {
                 timerDisplay.classList.remove('hidden');
                 startTimer();
+            }
+            
+            // Speed round setup
+            if (trainingFocus === 'speed') {
+                speedRoundTimer.classList.remove('hidden');
+                currentCasualtyIndex = 0;
+                simulationStartTime = Date.now();
+                // Auto-open first casualty
+                setTimeout(() => openTriageModal(casualties[0]), 500);
             }
 
             // Generate METHANE report
@@ -1233,18 +1354,9 @@
 
         const endSimulation = () => {
             if (timerInterval) clearInterval(timerInterval);
+            if (speedRoundInterval) clearInterval(speedRoundInterval);
             generateReport();
             reportModal.classList.remove('hidden');
-        };
-
-        const resetToMenu = () => {
-            setupScreen.classList.remove('hidden');
-            simulationScreen.classList.add('hidden');
-            reportModal.classList.add('hidden');
-            casualties = [];
-            currentPhase = 'tst';
-            secondsElapsed = 0;
-            if (timerInterval) clearInterval(timerInterval);
         };
 
         const generateReport = () => {
@@ -1407,6 +1519,11 @@
             currentCasualty = casualty;
             triageModal.classList.remove('hidden');
             
+            // Start speed round timer if applicable
+            if (trainingFocus === 'speed') {
+                startSpeedRoundTimer();
+            }
+            
             document.getElementById('modalCasualtyId').textContent = `#${casualty.id}`;
             document.getElementById('modalInjuryDescription').textContent = casualty.injuryDescription;
             
@@ -1426,6 +1543,19 @@
             
             if (casualty.preExistingCondition) {
                 detailsHtml += `<div class="col-span-2"><strong>Condition:</strong> ${casualty.preExistingCondition}</div>`;
+            }
+            
+            // Add clinical findings if enabled
+            if (showClinicalImages) {
+                const findings = getClinicalFindings(casualty);
+                if (findings.length > 0) {
+                    detailsHtml += `<div class="col-span-2 mt-2 pt-2 border-t border-gray-300">
+                        <strong>Clinical Findings:</strong>
+                        <ul class="text-xs mt-1 ml-4 list-disc">
+                            ${findings.map(f => `<li>${f}</li>`).join('')}
+                        </ul>
+                    </div>`;
+                }
             }
             
             document.getElementById('modalPatientDetails').innerHTML = detailsHtml;
@@ -1463,6 +1593,11 @@
         const closeModal = () => {
             triageModal.classList.add('hidden');
             currentCasualty = null;
+            
+            // Stop speed round timer
+            if (trainingFocus === 'speed') {
+                stopSpeedRoundTimer();
+            }
         };
 
         const showResult = (priority, message) => {
@@ -1482,7 +1617,10 @@
                 renderCasualties();
                 closeModal();
                 
-                if (triageSystem === 'tst_mitt' && currentPhase === 'tst') {
+                // Handle speed round progression
+                if (trainingFocus === 'speed') {
+                    moveToNextCasualty();
+                } else if (triageSystem === 'tst_mitt' && currentPhase === 'tst') {
                     const allSieved = casualties.every(c => c.userTstTriage !== null);
                     if (allSieved) startMittButton.classList.remove('hidden');
                 }
@@ -1573,11 +1711,331 @@
             renderCasualties(victim.id);
         };
 
+        // Speed Round Timer Management
+        const startSpeedRoundTimer = () => {
+            casualtyTimeRemaining = 30;
+            updateSpeedTimerDisplay();
+            
+            if (speedRoundInterval) clearInterval(speedRoundInterval);
+            
+            speedRoundInterval = setInterval(() => {
+                casualtyTimeRemaining--;
+                updateSpeedTimerDisplay();
+                
+                if (casualtyTimeRemaining <= 0) {
+                    autoSkipCasualty();
+                }
+            }, 1000);
+        };
+
+        const stopSpeedRoundTimer = () => {
+            if (speedRoundInterval) {
+                clearInterval(speedRoundInterval);
+                speedRoundInterval = null;
+            }
+        };
+
+        const updateSpeedTimerDisplay = () => {
+            casualtyTimer.textContent = casualtyTimeRemaining;
+            const percentage = (casualtyTimeRemaining / 30) * 100;
+            speedTimerBar.style.width = percentage + '%';
+        };
+
+        const autoSkipCasualty = () => {
+            stopSpeedRoundTimer();
+            
+            // Auto-triage as P3 if time runs out (penalty)
+            if (currentCasualty) {
+                const isMitt = (triageSystem === 'tst_mitt' && currentPhase === 'mitt') || triageSystem === 'mitt';
+                if (isMitt) {
+                    currentCasualty.userMittTriage = 'p3';
+                } else {
+                    currentCasualty.userTstTriage = 'p3';
+                }
+                currentCasualty.triageStatus = 'p3';
+            }
+            
+            closeModal();
+            renderCasualties();
+            moveToNextCasualty();
+        };
+
+        const moveToNextCasualty = () => {
+            currentCasualtyIndex++;
+            
+            if (currentCasualtyIndex < casualties.length) {
+                setTimeout(() => openTriageModal(casualties[currentCasualtyIndex]), 300);
+            } else {
+                // All casualties triaged
+                speedRoundTimer.classList.add('hidden');
+                if (triageSystem === 'tst_mitt' && currentPhase === 'tst') {
+                    startMittButton.classList.remove('hidden');
+                }
+            }
+        };
+
+        // Clinical Findings Helper
+        const getClinicalFindings = (casualty) => {
+            const findings = [];
+            
+            // Conscious level details
+            if (casualty.conscious === 'Unresponsive') {
+                findings.push('No response to pain or voice');
+            } else if (casualty.conscious === 'Pain') {
+                findings.push('Only responds to painful stimulus');
+            } else if (casualty.conscious === 'Voice') {
+                findings.push('Responds to voice but not fully alert');
+            }
+            
+            // Breathing findings
+            if (!casualty.isBreathing) {
+                findings.push('No respiratory effort visible');
+                if (casualty.airwayClears) {
+                    findings.push('Airway obstruction cleared - now breathing');
+                } else {
+                    findings.push('Airway remains obstructed despite manoeuvres');
+                }
+            } else if (casualty.resps > 30) {
+                findings.push('Rapid, shallow breathing pattern');
+            } else if (casualty.resps < 10) {
+                findings.push('Slow, irregular breathing');
+            }
+            
+            // Circulation findings
+            if (casualty.pulse > 120) {
+                findings.push('Tachycardic with thready pulse');
+            } else if (casualty.pulse < 50) {
+                findings.push('Bradycardic');
+            }
+            
+            // Injury-specific findings
+            if (casualty.hasSevereBleeding || casualty.hasCatastrophicBleeding) {
+                findings.push('Active haemorrhage visible');
+                if (casualty.hasCatastrophicBleeding) {
+                    findings.push('Pulsatile arterial bleeding');
+                }
+            }
+            
+            if (casualty.injuries.some(i => i.type === 'burns')) {
+                findings.push('Singed nasal hairs and soot around mouth/nose');
+                findings.push('Erythema and blistering visible on exposed skin');
+            }
+            
+            if (casualty.injuries.some(i => i.type === 'head')) {
+                findings.push('Haematoma visible, possible skull deformity');
+            }
+            
+            if (casualty.injuries.some(i => i.type === 'penetrating')) {
+                findings.push('Penetrating wound with possible underlying organ damage');
+            }
+            
+            return findings;
+        };
+
+        // PDF Generation
+        const generatePDF = () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const priorityValue = {
+                'deceased': 0,
+                'p3': 1,
+                'p2': 2,
+                'p1': 3
+            };
+            
+            const stats = { tst: { correct: 0, underTriaged: 0, overTriaged: 0 }, mitt: { correct: 0, underTriaged: 0, overTriaged: 0 } };
+            
+            casualties.forEach(c => {
+                if (triageSystem === 'tst' || triageSystem === 'tst_mitt') {
+                    if (c.userTstTriage) {
+                        const userValue = priorityValue[c.userTstTriage];
+                        const correctValue = priorityValue[c.correctTst];
+                        if (userValue === correctValue) stats.tst.correct++;
+                        else if (userValue < correctValue) stats.tst.underTriaged++;
+                        else stats.tst.overTriaged++;
+                    }
+                }
+                if (triageSystem === 'mitt' || triageSystem === 'tst_mitt') {
+                    if (c.userMittTriage) {
+                        const userValue = priorityValue[c.userMittTriage];
+                        const correctValue = priorityValue[c.correctMitt];
+                        if (userValue === correctValue) stats.mitt.correct++;
+                        else if (userValue < correctValue) stats.mitt.underTriaged++;
+                        else stats.mitt.overTriaged++;
+                    }
+                }
+            });
+            
+            const tstTriaged = stats.tst.correct + stats.tst.underTriaged + stats.tst.overTriaged;
+            const mittTriaged = stats.mitt.correct + stats.mitt.underTriaged + stats.mitt.overTriaged;
+            const tstAccuracy = tstTriaged > 0 ? Math.round((stats.tst.correct / tstTriaged) * 100) : 0;
+            const mittAccuracy = mittTriaged > 0 ? Math.round((stats.mitt.correct / mittTriaged) * 100) : 0;
+            
+            // Header with WMEBEM branding
+            doc.setFillColor(37, 99, 235); // Blue
+            doc.rect(0, 0, 210, 40, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(24);
+            doc.setFont(undefined, 'bold');
+            doc.text('TST & MITT Triage Training', 105, 20, { align: 'center' });
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'normal');
+            doc.text('WMEBEM - West Midlands Evidence Based Emergency Medicine', 105, 30, { align: 'center' });
+            
+            // Certificate section
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(18);
+            doc.setFont(undefined, 'bold');
+            doc.text('Training Certificate', 105, 55, { align: 'center' });
+            
+            // Date and scenario
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'normal');
+            const currentDate = new Date().toLocaleDateString('en-GB', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric' 
+            });
+            doc.text(`Date: ${currentDate}`, 20, 70);
+            doc.text(`Scenario: ${simTitle.textContent}`, 20, 78);
+            doc.text(`Training System: ${triageSystem === 'tst_mitt' ? 'TST & MITT' : triageSystem.toUpperCase()}`, 20, 86);
+            
+            if (trainingFocus !== 'standard') {
+                const focusText = {
+                    'paediatric': 'Paediatric Focus',
+                    'burns': 'Burns Focus',
+                    'cbrn': 'CBRN Focus',
+                    'speed': 'Speed Round'
+                };
+                doc.text(`Training Focus: ${focusText[trainingFocus]}`, 20, 94);
+            }
+            
+            if (secondsElapsed > 0) {
+                const mins = Math.floor(secondsElapsed / 60);
+                const secs = secondsElapsed % 60;
+                doc.text(`Time Taken: ${mins} min ${secs} sec`, 20, trainingFocus !== 'standard' ? 102 : 94);
+            }
+            
+            // Performance Summary
+            let yPos = trainingFocus !== 'standard' ? 115 : 110;
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text('Performance Summary', 20, yPos);
+            
+            yPos += 10;
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'normal');
+            
+            if (triageSystem === 'tst' || triageSystem === 'tst_mitt') {
+                doc.setFont(undefined, 'bold');
+                doc.text('Triage Sieve (TST):', 20, yPos);
+                doc.setFont(undefined, 'normal');
+                yPos += 8;
+                doc.setTextColor(22, 163, 74); // Green
+                doc.text(`Correct: ${stats.tst.correct}`, 25, yPos);
+                doc.setTextColor(220, 38, 38); // Red
+                doc.text(`Under-triaged: ${stats.tst.underTriaged}`, 80, yPos);
+                doc.setTextColor(245, 158, 11); // Amber
+                doc.text(`Over-triaged: ${stats.tst.overTriaged}`, 135, yPos);
+                doc.setTextColor(0, 0, 0);
+                yPos += 8;
+                doc.text(`Accuracy: ${tstAccuracy}% (${stats.tst.correct}/${tstTriaged})`, 25, yPos);
+                yPos += 10;
+            }
+            
+            if (triageSystem === 'mitt' || triageSystem === 'tst_mitt') {
+                doc.setFont(undefined, 'bold');
+                doc.text('Triage Sort (MITT):', 20, yPos);
+                doc.setFont(undefined, 'normal');
+                yPos += 8;
+                doc.setTextColor(22, 163, 74);
+                doc.text(`Correct: ${stats.mitt.correct}`, 25, yPos);
+                doc.setTextColor(220, 38, 38);
+                doc.text(`Under-triaged: ${stats.mitt.underTriaged}`, 80, yPos);
+                doc.setTextColor(245, 158, 11);
+                doc.text(`Over-triaged: ${stats.mitt.overTriaged}`, 135, yPos);
+                doc.setTextColor(0, 0, 0);
+                yPos += 8;
+                doc.text(`Accuracy: ${mittAccuracy}% (${stats.mitt.correct}/${mittTriaged})`, 25, yPos);
+                yPos += 10;
+            }
+            
+            // Overall assessment
+            yPos += 5;
+            doc.setFont(undefined, 'bold');
+            doc.text('Overall Assessment:', 20, yPos);
+            doc.setFont(undefined, 'normal');
+            yPos += 8;
+            
+            const overallAccuracy = triageSystem === 'tst_mitt' ? 
+                Math.round(((stats.tst.correct + stats.mitt.correct) / (tstTriaged + mittTriaged)) * 100) :
+                (triageSystem === 'tst' ? tstAccuracy : mittAccuracy);
+            
+            let assessment = '';
+            if (overallAccuracy >= 90) assessment = 'Excellent - demonstrates strong triage decision-making';
+            else if (overallAccuracy >= 75) assessment = 'Good - shows competent triage skills with room for refinement';
+            else if (overallAccuracy >= 60) assessment = 'Satisfactory - further practice recommended';
+            else assessment = 'Requires significant additional training';
+            
+            doc.text(assessment, 20, yPos);
+            
+            // Footer
+            doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            doc.text('This certificate verifies completion of simulation-based triage training.', 105, 280, { align: 'center' });
+            doc.text('For portfolio evidence and ARCP documentation.', 105, 285, { align: 'center' });
+            
+            // Save PDF
+            const filename = `TST-MITT-Training-${currentDate.replace(/\s/g, '-')}.pdf`;
+            doc.save(filename);
+        };
+
         // --- Event Listeners ---
         startSimButton.addEventListener('click', startSimulation);
         endSimButton.addEventListener('click', endSimulation);
         viewAlgosButton.addEventListener('click', () => imageModal.classList.remove('hidden'));
         closeImageModalButton.addEventListener('click', () => imageModal.classList.add('hidden'));
+        downloadPdfButton.addEventListener('click', generatePDF);
+        
+        // Clinical images toggle
+        showClinicalImagesCheckbox.addEventListener('change', (e) => {
+            showClinicalImages = e.target.checked;
+        });
+        
+        // Speed round skip button
+        skipCasualtyButton.addEventListener('click', autoSkipCasualty);
+
+        // Touch/Swipe gesture support for mobile
+        let touchStartX = 0;
+        let touchEndX = 0;
+        let touchStartY = 0;
+        let touchEndY = 0;
+        
+        casualtiesContainer.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+        
+        casualtiesContainer.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipe();
+        }, { passive: true });
+        
+        const handleSwipe = () => {
+            const horizontalDiff = touchEndX - touchStartX;
+            const verticalDiff = Math.abs(touchEndY - touchStartY);
+            
+            // Only register as swipe if horizontal movement is > 50px and mostly horizontal
+            if (Math.abs(horizontalDiff) > 50 && verticalDiff < 50) {
+                if (horizontalDiff > 0) {
+                    // Swipe right - could be used for navigation if needed
+                } else {
+                    // Swipe left - could be used for navigation if needed
+                }
+            }
+        };
 
         casualtiesContainer.addEventListener('click', (e) => {
             if (e.target.classList.contains('triage-button')) {
@@ -1594,6 +2052,13 @@
 
             casualties.forEach(c => c.triageStatus = c.userTstTriage); // Show initial sieve result
             renderCasualties();
+            
+            // Reset speed round for MITT phase if in speed mode
+            if (trainingFocus === 'speed') {
+                currentCasualtyIndex = 0;
+                speedRoundTimer.classList.remove('hidden');
+                setTimeout(() => openTriageModal(casualties[0]), 500);
+            }
         });
 
         // Setup Screen Selectors
@@ -1695,6 +2160,20 @@
                 return;
             }
         });
+        
+        const resetToMenu = () => {
+            setupScreen.classList.remove('hidden');
+            simulationScreen.classList.add('hidden');
+            reportModal.classList.add('hidden');
+            speedRoundTimer.classList.add('hidden');
+            casualties = [];
+            currentPhase = 'tst';
+            secondsElapsed = 0;
+            casualtyTimeRemaining = 30;
+            currentCasualtyIndex = 0;
+            if (timerInterval) clearInterval(timerInterval);
+            if (speedRoundInterval) clearInterval(speedRoundInterval);
+        };
         
         closeReportButton.addEventListener('click', () => { reportModal.classList.add('hidden'); resetToMenu(); });
     });
