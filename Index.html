@@ -1248,22 +1248,48 @@
         };
 
         const generateReport = () => {
-            const correct = { tst: 0, mitt: 0 };
-            const incorrect = { tst: 0, mitt: 0 };
+            const priorityValue = {
+                'deceased': 0,
+                'p3': 1,
+                'p2': 2,
+                'p1': 3
+            };
+            
+            const stats = { tst: { correct: 0, underTriaged: 0, overTriaged: 0 }, mitt: { correct: 0, underTriaged: 0, overTriaged: 0 } };
 
             casualties.forEach(c => {
                 if (triageSystem === 'tst' || triageSystem === 'tst_mitt') {
-                    if (c.userTstTriage === c.correctTst) correct.tst++;
-                    else if (c.userTstTriage) incorrect.tst++;
+                    if (c.userTstTriage) {
+                        const userValue = priorityValue[c.userTstTriage];
+                        const correctValue = priorityValue[c.correctTst];
+                        
+                        if (userValue === correctValue) {
+                            stats.tst.correct++;
+                        } else if (userValue < correctValue) {
+                            stats.tst.underTriaged++;
+                        } else {
+                            stats.tst.overTriaged++;
+                        }
+                    }
                 }
                 if (triageSystem === 'mitt' || triageSystem === 'tst_mitt') {
-                    if (c.userMittTriage === c.correctMitt) correct.mitt++;
-                    else if (c.userMittTriage) incorrect.mitt++;
+                    if (c.userMittTriage) {
+                        const userValue = priorityValue[c.userMittTriage];
+                        const correctValue = priorityValue[c.correctMitt];
+                        
+                        if (userValue === correctValue) {
+                            stats.mitt.correct++;
+                        } else if (userValue < correctValue) {
+                            stats.mitt.underTriaged++;
+                        } else {
+                            stats.mitt.overTriaged++;
+                        }
+                    }
                 }
             });
 
-            const tstTriaged = correct.tst + incorrect.tst;
-            const mittTriaged = correct.mitt + incorrect.mitt;
+            const tstTriaged = stats.tst.correct + stats.tst.underTriaged + stats.tst.overTriaged;
+            const mittTriaged = stats.mitt.correct + stats.mitt.underTriaged + stats.mitt.overTriaged;
 
             let html = `<div class="mb-6"><h4 class="text-xl font-bold mb-2">Simulation Summary</h4>`;
             
@@ -1274,23 +1300,49 @@
             }
 
             if (triageSystem === 'tst' || triageSystem === 'tst_mitt') {
-                const tstAccuracy = tstTriaged > 0 ? Math.round((correct.tst / tstTriaged) * 100) : 0;
+                const tstAccuracy = tstTriaged > 0 ? Math.round((stats.tst.correct / tstTriaged) * 100) : 0;
                 html += `
-                    <div class="mb-4">
-                        <h5 class="font-semibold text-lg mb-2">Triage Sieve (TST)</h5>
-                        <p><strong>Correct:</strong> ${correct.tst} / ${tstTriaged} (${tstAccuracy}%)</p>
-                        <p><strong>Incorrect:</strong> ${incorrect.tst}</p>
+                    <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+                        <h5 class="font-semibold text-lg mb-3">Triage Sieve (TST)</h5>
+                        <div class="grid grid-cols-3 gap-4 text-center mb-2">
+                            <div class="p-3 bg-green-100 rounded">
+                                <div class="text-2xl font-bold text-green-700">${stats.tst.correct}</div>
+                                <div class="text-sm text-green-700">Correct</div>
+                            </div>
+                            <div class="p-3 bg-red-100 rounded">
+                                <div class="text-2xl font-bold text-red-700">${stats.tst.underTriaged}</div>
+                                <div class="text-sm text-red-700">Under-triaged</div>
+                            </div>
+                            <div class="p-3 bg-amber-100 rounded">
+                                <div class="text-2xl font-bold text-amber-700">${stats.tst.overTriaged}</div>
+                                <div class="text-sm text-amber-700">Over-triaged</div>
+                            </div>
+                        </div>
+                        <p class="text-center font-semibold">Accuracy: ${tstAccuracy}% (${stats.tst.correct} / ${tstTriaged})</p>
                     </div>
                 `;
             }
 
             if (triageSystem === 'mitt' || triageSystem === 'tst_mitt') {
-                const mittAccuracy = mittTriaged > 0 ? Math.round((correct.mitt / mittTriaged) * 100) : 0;
+                const mittAccuracy = mittTriaged > 0 ? Math.round((stats.mitt.correct / mittTriaged) * 100) : 0;
                 html += `
-                    <div class="mb-4">
-                        <h5 class="font-semibold text-lg mb-2">Triage Sort (MITT)</h5>
-                        <p><strong>Correct:</strong> ${correct.mitt} / ${mittTriaged} (${mittAccuracy}%)</p>
-                        <p><strong>Incorrect:</strong> ${incorrect.mitt}</p>
+                    <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+                        <h5 class="font-semibold text-lg mb-3">Triage Sort (MITT)</h5>
+                        <div class="grid grid-cols-3 gap-4 text-center mb-2">
+                            <div class="p-3 bg-green-100 rounded">
+                                <div class="text-2xl font-bold text-green-700">${stats.mitt.correct}</div>
+                                <div class="text-sm text-green-700">Correct</div>
+                            </div>
+                            <div class="p-3 bg-red-100 rounded">
+                                <div class="text-2xl font-bold text-red-700">${stats.mitt.underTriaged}</div>
+                                <div class="text-sm text-red-700">Under-triaged</div>
+                            </div>
+                            <div class="p-3 bg-amber-100 rounded">
+                                <div class="text-2xl font-bold text-amber-700">${stats.mitt.overTriaged}</div>
+                                <div class="text-sm text-amber-700">Over-triaged</div>
+                            </div>
+                        </div>
+                        <p class="text-center font-semibold">Accuracy: ${mittAccuracy}% (${stats.mitt.correct} / ${mittTriaged})</p>
                     </div>
                 `;
             }
@@ -1301,18 +1353,46 @@
                 const tstMatch = c.userTstTriage === c.correctTst;
                 const mittMatch = c.userMittTriage === c.correctMitt;
                 
+                const tstValue = priorityValue[c.userTstTriage];
+                const correctTstValue = priorityValue[c.correctTst];
+                const mittValue = priorityValue[c.userMittTriage];
+                const correctMittValue = priorityValue[c.correctMitt];
+                
+                let tstStatus = '', mittStatus = '';
+                if (c.userTstTriage) {
+                    if (tstMatch) tstStatus = '✓ Correct';
+                    else if (tstValue < correctTstValue) tstStatus = '↓ Under-triaged';
+                    else tstStatus = '↑ Over-triaged';
+                }
+                if (c.userMittTriage) {
+                    if (mittMatch) mittStatus = '✓ Correct';
+                    else if (mittValue < correctMittValue) mittStatus = '↓ Under-triaged';
+                    else mittStatus = '↑ Over-triaged';
+                }
+                
+                const hasError = (!tstMatch && c.userTstTriage) || (!mittMatch && c.userMittTriage);
+                
                 html += `
-                    <div class="mb-4 p-3 border rounded-lg ${(!tstMatch || !mittMatch) && currentMode === 'test' ? 'border-red-300 bg-red-50' : 'border-gray-300'}">
+                    <div class="mb-4 p-3 border rounded-lg ${hasError ? 'border-red-300 bg-red-50' : 'border-gray-300'}">
                         <p class="font-semibold">Casualty #${c.id} - ${c.age}yr ${c.sex} ${c.role}</p>
                         <p class="text-sm text-gray-700 italic mb-2">"${c.injuryDescription}"</p>
+                        <p class="text-xs text-gray-600 mb-2">Conscious: ${c.conscious} | RR: ${c.resps} | HR: ${c.pulse}</p>
                 `;
                 
                 if (triageSystem === 'tst' || triageSystem === 'tst_mitt') {
-                    html += `<p class="text-sm"><strong>TST:</strong> Your Triage: <span class="priority-tag ${c.userTstTriage || 'bg-gray-400'}">${(c.userTstTriage || 'None').toUpperCase()}</span> | Correct: <span class="priority-tag ${c.correctTst}">${c.correctTst.toUpperCase()}</span> ${tstMatch ? '✓' : '✗'}</p>`;
+                    html += `<p class="text-sm mb-1"><strong>TST:</strong> Your Triage: <span class="priority-tag ${c.userTstTriage || 'bg-gray-400'}">${(c.userTstTriage || 'None').toUpperCase()}</span> | Correct: <span class="priority-tag ${c.correctTst}">${c.correctTst.toUpperCase()}</span> <span class="${tstMatch ? 'feedback-correct' : 'feedback-incorrect'}">${tstStatus}</span></p>`;
+                    
+                    if (!tstMatch && c.userTstTriage) {
+                        html += `<div class="text-xs bg-white p-2 rounded mt-1 mb-2"><strong>TST Explanation:</strong> ${explainTst(c)}</div>`;
+                    }
                 }
                 
                 if (triageSystem === 'mitt' || triageSystem === 'tst_mitt') {
-                    html += `<p class="text-sm"><strong>MITT:</strong> Your Triage: <span class="priority-tag ${c.userMittTriage || 'bg-gray-400'}">${(c.userMittTriage || 'None').toUpperCase()}</span> | Correct: <span class="priority-tag ${c.correctMitt}">${c.correctMitt.toUpperCase()}</span> ${mittMatch ? '✓' : '✗'}</p>`;
+                    html += `<p class="text-sm mb-1"><strong>MITT:</strong> Your Triage: <span class="priority-tag ${c.userMittTriage || 'bg-gray-400'}">${(c.userMittTriage || 'None').toUpperCase()}</span> | Correct: <span class="priority-tag ${c.correctMitt}">${c.correctMitt.toUpperCase()}</span> <span class="${mittMatch ? 'feedback-correct' : 'feedback-incorrect'}">${mittStatus}</span></p>`;
+                    
+                    if (!mittMatch && c.userMittTriage) {
+                        html += `<div class="text-xs bg-white p-2 rounded mt-1"><strong>MITT Explanation:</strong> ${explainMitt(c)}</div>`;
+                    }
                 }
 
                 html += `</div>`;
@@ -1338,18 +1418,14 @@
                 <div><strong>Sex:</strong> ${casualty.sex}</div>
                 <div><strong>Role:</strong> ${casualty.role}</div>
                 <div><strong>Can Walk:</strong> ${casualty.canWalk ? 'Yes' : 'No'}</div>
+                <div><strong>Conscious:</strong> ${casualty.conscious}</div>
+                <div><strong>Breathing:</strong> ${casualty.isBreathing ? 'Yes' : 'No'}</div>
+                <div><strong>Resp Rate:</strong> ${casualty.resps}/min</div>
+                <div><strong>Pulse:</strong> ${casualty.pulse}/min</div>
             `;
             
-            if (currentMode === 'teach') {
-                detailsHtml += `
-                    <div><strong>Conscious:</strong> ${casualty.conscious}</div>
-                    <div><strong>Breathing:</strong> ${casualty.isBreathing ? 'Yes' : 'No'}</div>
-                    <div><strong>Resp Rate:</strong> ${casualty.resps}/min</div>
-                    <div><strong>Pulse:</strong> ${casualty.pulse}/min</div>
-                `;
-                if (casualty.preExistingCondition) {
-                    detailsHtml += `<div class="col-span-2"><strong>Condition:</strong> ${casualty.preExistingCondition}</div>`;
-                }
+            if (casualty.preExistingCondition) {
+                detailsHtml += `<div class="col-span-2"><strong>Condition:</strong> ${casualty.preExistingCondition}</div>`;
             }
             
             document.getElementById('modalPatientDetails').innerHTML = detailsHtml;
@@ -1391,7 +1467,6 @@
 
         const showResult = (priority, message) => {
             document.querySelectorAll('#tstSection > div').forEach(el => el.classList.add('hidden'));
-            document.getElementById('priorityResult').classList.remove('hidden');
             
             const isMitt = (triageSystem === 'tst_mitt' && currentPhase === 'mitt') || triageSystem === 'mitt';
             
@@ -1401,6 +1476,22 @@
                 currentCasualty.userTstTriage = priority;
             }
             
+            // In test mode, just record the choice and close modal without feedback
+            if (currentMode === 'test') {
+                currentCasualty.triageStatus = priority;
+                renderCasualties();
+                closeModal();
+                
+                if (triageSystem === 'tst_mitt' && currentPhase === 'tst') {
+                    const allSieved = casualties.every(c => c.userTstTriage !== null);
+                    if (allSieved) startMittButton.classList.remove('hidden');
+                }
+                return;
+            }
+            
+            // Teach mode - show feedback
+            document.getElementById('priorityResult').classList.remove('hidden');
+            
             const isCorrect = isMitt ? 
                 (priority === currentCasualty.correctMitt) : 
                 (priority === currentCasualty.correctTst);
@@ -1408,24 +1499,10 @@
             const correctPriority = isMitt ? currentCasualty.correctMitt : currentCasualty.correctTst;
             
             let resultHtml = `<div class="text-center py-4"><p class="text-3xl mb-2"><span class="priority-tag ${priority}">${priority.toUpperCase()}</span></p>`;
-            
-            if (currentMode === 'teach') {
-                resultHtml += `<p class="font-semibold ${isCorrect ? 'feedback-correct' : 'feedback-incorrect'}">${isCorrect ? '✓ Correct!' : `✗ Incorrect. Correct triage: ${correctPriority.toUpperCase()}`}</p></div>`;
-                document.getElementById('teachExplanation').classList.remove('hidden');
-                const explanation = isMitt ? explainMitt(currentCasualty) : explainTst(currentCasualty);
-                document.getElementById('explanationContent').innerHTML = explanation;
-            } else {
-                // Test mode
-                resultHtml += `<p class="font-semibold ${isCorrect ? 'feedback-correct' : 'feedback-incorrect'}">${isCorrect ? '✓ Correct!' : `✗ Incorrect. Correct triage: ${correctPriority.toUpperCase()}`}</p></div>`;
-                // Show explanation if incorrect
-                if (!isCorrect) {
-                    document.getElementById('teachExplanation').classList.remove('hidden');
-                    const explanation = isMitt ? explainMitt(currentCasualty) : explainTst(currentCasualty);
-                    document.getElementById('explanationContent').innerHTML = explanation;
-                } else {
-                    document.getElementById('teachExplanation').classList.add('hidden');
-                }
-            }
+            resultHtml += `<p class="font-semibold ${isCorrect ? 'feedback-correct' : 'feedback-incorrect'}">${isCorrect ? '✓ Correct!' : `✗ Incorrect. Correct triage: ${correctPriority.toUpperCase()}`}</p></div>`;
+            document.getElementById('teachExplanation').classList.remove('hidden');
+            const explanation = isMitt ? explainMitt(currentCasualty) : explainTst(currentCasualty);
+            document.getElementById('explanationContent').innerHTML = explanation;
             
             document.getElementById('resultCard').innerHTML = resultHtml;
         };
