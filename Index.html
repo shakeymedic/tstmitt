@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TST & MITT Triage Training Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .casualty-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .casualty-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .priority-tag {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .p1 { background-color: #ef4444; color: white; } /* Red */
+        .p2 { background-color: #f59e0b; color: white; } /* Amber */
+        .p3 { background-color: #22c55e; color: white; } /* Green */
+        .not-breathing { background-color: #3b82f6; color: white; } /* Blue for 'Not Breathing' as per JESIP */
+        .deceased { background-color: #1f2937; color: white; } /* Grey/Black for deceased */
+        
+        .btn-triage {
+            transition: all 0.2s;
+        }
+
+        .btn-triage:hover:not(:disabled) {
+            transform: scale(1.05);
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .image-modal-content {
+             max-width: 90vw;
+             max-height: 90vh;
+             width: auto;
+             height: auto;
+             padding: 1rem;
+        }
+        .feedback-correct {
+            color: #166534; /* Green-800 */
+        }
+        .feedback-incorrect {
+            color: #991B1B; /* Red-800 */
+        }
+        .casualty-svg-container {
+            width: 80px;
+            height: 120px;
+            margin-right: 1rem;
+        }
+
+        @keyframes flash-red {
+            0%, 100% { background-color: white; }
+            50% { background-color: #fecaca; } /* Red-200 */
+        }
+
+        .deteriorated-flash {
+            animation: flash-red 1.5s ease-in-out;
+        }
+
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="app" class="container mx-auto p-4 md:p-8">
+
+        <!-- Header -->
+        <header class="text-center mb-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <img src="https://iili.io/KGQOvkl.md.png" alt="WMEBEM Logo" class="h-20 w-20">
+            <div>
+                <h1 class="text-4xl font-bold text-gray-900">TST & MITT Triage Trainer</h1>
+                <p class="text-lg text-gray-600 mt-2">A Major Incident Triage Training Tool</p>
+            </div>
+        </header>
+
+        <!-- Setup Screen -->
+        <div id="setupScreen" class="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
+            <h2 class="text-2xl font-semibold mb-6 text-center">Create New Simulation</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Training Mode</label>
+                    <div id="modeSelector" class="flex border border-gray-300 rounded-lg overflow-hidden">
+                        <button data-mode="teach" class="mode-button flex-1 p-3 font-semibold text-white bg-blue-600 transition-colors duration-200">Teach</button>
+                        <button data-mode="test" class="mode-button flex-1 p-3 font-semibold text-gray-600 bg-gray-200 transition-colors duration-200">Test</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Triage System</label>
+                    <div id="systemSelector" class="flex border border-gray-300 rounded-lg overflow-hidden">
+                        <button data-system="tst_mitt" class="system-button flex-1 p-2 md:p-3 text-sm md:text-base font-semibold text-white bg-blue-600 transition-colors duration-200">TST & MITT</button>
+                        <button data-system="tst" class="system-button flex-1 p-2 md:p-3 text-sm md:text-base font-semibold text-gray-600 bg-gray-200 transition-colors duration-200">TST Only</button>
+                        <button data-system="mitt" class="system-button flex-1 p-2 md:p-3 text-sm md:text-base font-semibold text-gray-600 bg-gray-200 transition-colors duration-200">MITT Only</button>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="mb-6">
+                    <label for="incidentType" class="block text-sm font-medium text-gray-700 mb-2">Type of Incident</label>
+                    <select id="incidentType" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="RTC">Road Traffic Collision (RTC)</option>
+                        <option value="Train">Train Crash</option>
+                        <option value="HGV">HGV Incident</option>
+                        <option value="Chemical">Chemical Incident (CBRN)</option>
+                        <option value="Fire">Major Fire</option>
+                        <option value="MTFA">Marauding Terrorist Firearms Attack (MTFA)</option>
+                    </select>
+                </div>
+                
+                <div class="mb-6">
+                    <label for="vehicleCount" class="block text-sm font-medium text-gray-700 mb-2">Number of Vehicles/Carriages</label>
+                    <input id="vehicleCount" type="number" value="3" min="1" max="10" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div class="mb-8">
+                    <label for="casualtyCountInput" class="block text-sm font-medium text-gray-700 mb-2">Number of Casualties</label>
+                    <input id="casualtyCountInput" type="number" value="15" min="1" max="50" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
+
+            <button id="startSimButton" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition duration-300">
+                Start Simulation
+            </button>
+        </div>
+
+        <!-- Simulation Screen -->
+        <div id="simulationScreen" class="hidden">
+            <div class="grid grid-cols-2 md:grid-cols-3 items-center mb-6 gap-4">
+                 <div class="md:col-span-2">
+                    <h2 class="text-2xl font-bold" id="simTitle"></h2>
+                    <p class="text-md text-gray-600" id="simSubtitle"></p>
+                </div>
+                <div id="timerDisplay" class="hidden text-right">
+                    <p class="text-lg font-semibold text-gray-700">Time Elapsed</p>
+                    <p class="text-3xl font-bold text-blue-600" id="timer">00:00</p>
+                </div>
+                <div class="col-span-2 md:col-span-3 flex justify-end items-center flex-wrap gap-4">
+                    <button id="viewAlgosButton" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-4 focus:ring-gray-300 transition">
+                        View Algorithms
+                    </button>
+                    <button id="endSimButton" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 transition">
+                        End Simulation
+                    </button>
+                </div>
+            </div>
+            
+            <div id="phaseDisplay" class="bg-indigo-100 text-indigo-800 p-3 mb-6 rounded-lg shadow text-center hidden">
+                <p id="phaseText" class="font-semibold"></p>
+                <button id="startMittButton" class="hidden mt-2 bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700">
+                    Proceed to MITT Sort
+                </button>
+            </div>
+
+            <div id="scenarioBox" class="bg-blue-100 border-l-4 border-blue-500 text-blue-800 p-4 mb-6 rounded-r-lg shadow" role="alert">
+                <p class="font-bold text-lg">METHANE Report</p>
+                <div id="methaneReport" class="mt-2 text-sm"></div>
+            </div>
+
+            <div class="bg-gray-200 p-4 rounded-lg mb-6 text-center">
+                <div class="flex justify-between items-center flex-wrap">
+                    <h3 class="text-xl font-semibold mb-2 md:mb-0">Triage Summary</h3>
+                    <div id="legend" class="flex gap-4 text-xs text-gray-700">
+                        <span><svg class="inline-block" width="10" height="10"><circle cx="5" cy="5" r="5" fill="#ef4444"></circle></svg> Penetrating</span>
+                        <span><svg class="inline-block" width="10" height="10"><path d="M5 0 L0 5 L10 5 Z" fill="#ef4444" transform="rotate(180 5 2.5)"></path></svg> Bleeding</span>
+                        <span class="font-bold">#</span> Fracture
+                    </div>
+                </div>
+                 <div id="summaryStats" class="flex justify-center gap-4 md:gap-8 mt-2 text-white flex-wrap">
+                    <div class="p-3 rounded-lg p1 flex-grow text-center">P1: <span id="p1Count">0</span></div>
+                    <div class="p-3 rounded-lg p2 flex-grow text-center">P2: <span id="p2Count">0</span></div>
+                    <div class="p-3 rounded-lg p3 flex-grow text-center">P3: <span id="p3Count">0</span></div>
+                    <div class="p-3 rounded-lg deceased flex-grow text-center">Deceased: <span id="deceasedCount">0</span></div>
+                    <div class="p-3 rounded-lg bg-gray-500 flex-grow text-center">Untriaged: <span id="untriagedCount">0</span></div>
+                 </div>
+            </div>
+
+            <div id="casualtiesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Casualty cards will be injected here -->
+            </div>
+        </div>
+
+        <!-- Triage Modal -->
+        <div id="triageModal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-2xl font-bold">Triage Casualty <span id="modalCasualtyId"></span></h3>
+                    <button id="closeModalButton" class="text-2xl font-bold">&times;</button>
+                </div>
+                
+                <div id="modal-top-section" class="mb-4">
+                     <div id="modal-svg-container" class="w-48 mx-auto mb-4 flex-shrink-0">
+                        <!-- Larger SVG will be injected here -->
+                     </div>
+                     <div class="bg-gray-100 p-3 rounded-lg mb-4">
+                         <p class="text-sm italic">" <span id="modalInjuryDescription"></span> "</p>
+                     </div>
+                     <div id="modalPatientDetails" class="grid grid-cols-2 gap-x-4 gap-y-2 p-3 bg-gray-200 rounded-lg text-sm">
+                         <!-- Details populated by JS -->
+                     </div>
+                </div>
+
+
+                <!-- Teach Mode Questions -->
+                <div id="tstSection">
+                    <h4 id="tstSectionTitle" class="text-lg font-semibold mb-4 border-b pb-2"></h4>
+                    
+                    <!-- TST Questions -->
+                    <div id="tst-walking" class="hidden mb-4">
+                        <p class="font-semibold text-lg">Is the casualty able to walk?</p>
+                        <div class="flex gap-4 mt-2">
+                            <button data-answer="walk-yes" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600">Yes</button>
+                            <button data-answer="walk-no" class="flex-1 bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600">No</button>
+                        </div>
+                    </div>
+                    <div id="tst-bleeding" class="hidden mb-4">
+                        <p class="font-semibold text-lg">Is there severe, life-threatening bleeding?</p>
+                        <div class="flex gap-4 mt-2">
+                             <button data-answer="bleeding-yes" class="flex-1 bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600">Yes</button>
+                             <button data-answer="bleeding-no" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600">No</button>
+                        </div>
+                    </div>
+                    <div id="tst-talking" class="hidden mb-4">
+                        <p class="font-semibold text-lg">Is the casualty talking?</p>
+                        <div class="flex gap-4 mt-2">
+                             <button data-answer="talking-yes" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600">Yes</button>
+                             <button data-answer="talking-no" class="flex-1 bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600">No</button>
+                        </div>
+                    </div>
+                     <div id="tst-penetrating" class="hidden mb-4">
+                        <p class="font-semibold text-lg">Is there a penetrating injury to the torso?</p>
+                        <div class="flex gap-4 mt-2">
+                             <button data-answer="penetrating-yes" class="flex-1 bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600">Yes</button>
+                             <button data-answer="penetrating-no" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600">No</button>
+                        </div>
+                    </div>
+
+                    <!-- Shared & MITT Questions -->
+                    <div id="mitt-catastrophic-bleeding" class="hidden mb-4">
+                        <p class="font-semibold text-lg">Is there catastrophic bleeding?</p>
+                        <div class="flex gap-4 mt-2">
+                             <button data-answer="cat-bleed-yes" class="flex-1 bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600">Yes</button>
+                             <button data-answer="cat-bleed-no" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600">No</button>
+                        </div>
+                    </div>
+                    <div id="tst-breathing" class="hidden mb-4">
+                        <p class="font-semibold text-lg">Are they breathing?</p>
+                        <div class="flex gap-4 mt-2">
+                             <button data-answer="breathe-yes" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600">Yes</button>
+                             <button data-answer="breathe-no" class="flex-1 bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600">No</button>
+                        </div>
+                    </div>
+                    <div id="mitt-responds-voice" class="hidden mb-4">
+                        <p class="font-semibold text-lg">Do they respond to voice?</p>
+                        <div class="flex gap-4 mt-2">
+                             <button data-answer="voice-yes" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600">Yes</button>
+                             <button data-answer="voice-no" class="flex-1 bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600">No</button>
+                        </div>
+                    </div>
+                    <div id="mitt-age" class="hidden mb-4">
+                        <p class="font-semibold text-lg">Is the casualty aged over 2 years?</p>
+                        <div class="flex gap-4 mt-2">
+                             <button data-answer="age-yes" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600">Yes</button>
+                             <button data-answer="age-no" class="flex-1 bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600">No</button>
+                        </div>
+                    </div>
+                    <div id="mitt-resp-rate" class="hidden mb-4">
+                        <p class="font-semibold text-lg">Is the breathing rate 12-23 per minute?</p>
+                        <div class="flex gap-4 mt-2">
+                             <button data-answer="rr-yes" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600">Yes</button>
+                             <button data-answer="rr-no" class="flex-1 bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600">No</button>
+                        </div>
+                    </div>
+                    <div id="mitt-hr" class="hidden mb-4">
+                         <p class="font-semibold text-lg">Is the heart rate 60-119 per minute?</p>
+                         <div class="flex gap-4 mt-2">
+                             <button data-answer="hr-yes" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600">Yes</button>
+                             <button data-answer="hr-no" class="flex-1 bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600">No</button>
+                         </div>
+                    </div>
+                </div>
+                
+                <!-- Direct Triage Section - TEST MODE -->
+                <div id="testSection" class="hidden">
+                    <h4 id="testSectionTitle" class="text-lg font-semibold mb-4 border-b pb-2"></h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button data-triage-choice="p1" class="triage-choice-button p-4 rounded-lg font-bold text-white p1 transition-transform hover:scale-105">Priority 1</button>
+                        <button data-triage-choice="p2" class="triage-choice-button p-4 rounded-lg font-bold text-white p2 transition-transform hover:scale-105">Priority 2</button>
+                        <button data-triage-choice="p3" class="triage-choice-button p-4 rounded-lg font-bold text-white p3 transition-transform hover:scale-105">Priority 3</button>
+                        <button data-triage-choice="deceased" class="triage-choice-button p-4 rounded-lg font-bold text-white deceased transition-transform hover:scale-105">Deceased</button>
+                    </div>
+                </div>
+
+                <!-- Results Section (Shared) -->
+                <div id="resultSection" class="hidden text-center">
+                    <h4 class="text-xl font-semibold mb-2">Triage Result</h4>
+                    <div id="resultTag" class="mx-auto w-fit priority-tag text-lg px-6 py-2"></div>
+                    <p id="resultReason" class="mt-4 text-gray-700"></p>
+                    <div id="feedbackSection" class="mt-4 text-left p-3 rounded-lg">
+                        <p id="correctnessFeedback" class="font-bold text-lg"></p>
+                        <div id="feedbackExplanation" class="mt-2 text-sm space-y-1"></div>
+                    </div>
+                    <div class="mt-6">
+                        <button id="confirmTriageButton" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700">Confirm & Continue</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+         <!-- Post-Sim Report Modal -->
+        <div id="reportModal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <h3 class="text-2xl font-bold mb-4">Simulation Report</h3>
+                <div id="testReportMetrics" class="hidden grid grid-cols-2 gap-4 mb-4 text-center">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Time Taken</p>
+                        <p id="reportTime" class="text-2xl font-bold"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">First-Try Accuracy</p>
+                        <p id="reportAccuracy" class="text-2xl font-bold"></p>
+                    </div>
+                </div>
+                <p id="reportSummary" class="mb-4 text-center"></p>
+                <div id="reportDetails" class="space-y-2 max-h-48 overflow-y-auto"></div>
+                <button id="closeReportButton" class="mt-6 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700">Close Report</button>
+            </div>
+        </div>
+
+        <!-- Algorithm Image Modal -->
+        <div id="imageModal" class="modal-overlay hidden">
+            <div class="modal-content image-modal-content relative">
+                 <button id="closeImageModalButton" class="absolute top-0 right-2 text-3xl font-bold text-black">&times;</button>
+                 <div class="flex flex-col md:flex-row gap-4 items-center justify-center">
+                    <img src="https://www.england.nhs.uk/wp-content/uploads/2023/04/ten-second-triage.png" alt="Ten Second Triage Algorithm" class="max-w-full h-auto max-h-[80vh] border rounded-lg">
+                    <img src="https://www.england.nhs.uk/wp-content/uploads/2023/04/nhs-major-incident-triage-tool.png" alt="Major Incident Triage Tool Algorithm" class="max-w-full h-auto max-h-[80vh] border rounded-lg">
+                 </div>
+            </div>
+        </div>
+
+
+    </div>
+
+    <footer class="text-center p-4 mt-8 text-xs text-gray-500">
+        <img src="https://iili.io/KGQOvkl.md.png" alt="WMEBEM Logo" class="h-12 w-12 mx-auto mb-4">
+        <p>&copy; 2025 West Midlands Evidence Based Emergency Medicine Group Ltd.</p>
+        <p class="mt-1">Developed by Dr Jake Turner.</p>
+        <p class="mt-2">This simulator is released under a Creative Commons Attribution 4.0 International License. You are free to use, share, and adapt this work, provided you give appropriate credit to the original developer.</p>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const setupScreen = document.getElementById('setupScreen');
+        const simulationScreen = document.getElementById('simulationScreen');
+        const startSimButton = document.getElementById('startSimButton');
+        const endSimButton = document.getElementById('endSimButton');
+        const viewAlgosButton = document.getElementById('viewAlgosButton');
+        const incidentTypeSelect = document.getElementById('incidentType');
+        const vehicleCountInput = document.getElementById('vehicleCount');
+        const casualtyCountInput = document.getElementById('casualtyCountInput');
+        const casualtiesContainer = document.getElementById('casualtiesContainer');
+        const simTitle = document.getElementById('simTitle');
+        const simSubtitle = document.getElementById('simSubtitle');
+        const methaneReport = document.getElementById('methaneReport');
+        const modeSelector = document.getElementById('modeSelector');
+        const systemSelector = document.getElementById('systemSelector');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const timer = document.getElementById('timer');
+        const phaseDisplay = document.getElementById('phaseDisplay');
+        const phaseText = document.getElementById('phaseText');
+        const startMittButton = document.getElementById('startMittButton');
+
+        // Modal elements
+        const triageModal = document.getElementById('triageModal');
+        const modalCasualtyId = document.getElementById('modalCasualtyId');
+        const modalInjuryDescription = document.getElementById('modalInjuryDescription');
+        const modalSvgContainer = document.getElementById('modal-svg-container');
+        const modalPatientDetails = document.getElementById('modalPatientDetails');
+        const tstSection = document.getElementById('tstSection');
+        const tstSectionTitle = document.getElementById('tstSectionTitle');
+        const testSection = document.getElementById('testSection');
+        const testSectionTitle = document.getElementById('testSectionTitle');
+        const resultSection = document.getElementById('resultSection');
+        const resultTag = document.getElementById('resultTag');
+        const resultReason = document.getElementById('resultReason');
+        const feedbackSection = document.getElementById('feedbackSection');
+        const correctnessFeedback = document.getElementById('correctnessFeedback');
+        const feedbackExplanation = document.getElementById('feedbackExplanation');
+        
+        // Report Modal Elements
+        const reportModal = document.getElementById('reportModal');
+        const closeReportButton = document.getElementById('closeReportButton');
+        const reportSummary = document.getElementById('reportSummary');
+        const reportDetails = document.getElementById('reportDetails');
+        const testReportMetrics = document.getElementById('testReportMetrics');
+        const reportTime = document.getElementById('reportTime');
+        const reportAccuracy = document.getElementById('reportAccuracy');
+        
+        // Image Modal Elements
+        const imageModal = document.getElementById('imageModal');
+        const closeImageModalButton = document.getElementById('closeImageModalButton');
+
+        // Summary stats
+        const p1Count = document.getElementById('p1Count');
+        const p2Count = document.getElementById('p2Count');
+        const p3Count = document.getElementById('p3Count');
+        const deceasedCount = document.getElementById('deceasedCount');
+        const untriagedCount = document.getElementById('untriagedCount');
+
+
+        // --- State ---
+        let casualties = [];
+        let currentCasualty = null;
+        let currentMode = 'teach'; // 'teach' or 'test'
+        let triageSystem = 'tst_mitt'; // 'tst', 'tst_mitt', or 'mitt'
+        let currentPhase = 'tst'; // 'tst' or 'mitt'
+        let timerInterval = null;
+        let secondsElapsed = 0;
+        
+        // --- Utility Functions ---
+        const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+        const probability = (percent) => Math.random() < (percent / 100);
+        const pickRandom = (arr) => arr[getRandomInt(0, arr.length - 1)];
+
+        // --- Casualty Generation ---
+        const generateCasualty = (id, incidentType) => {
+            const consciousLevels = ['Alert', 'Voice', 'Pain', 'Unresponsive'];
+            const canWalk = probability(30);
+            const sex = pickRandom(['Male', 'Female']);
+            let age, resps, pulse, conscious;
+            
+            // Paediatric Vitals
+            const randomAge = probability(15) ? getRandomInt(0, 12) : getRandomInt(13, 80);
+            age = randomAge;
+            if (age <= 1) { // Infant
+                resps = getRandomInt(30, 60); pulse = getRandomInt(100, 160);
+            } else if (age <= 3) { // Toddler
+                resps = getRandomInt(24, 40); pulse = getRandomInt(90, 150);
+            } else if (age <= 5) { // Preschool
+                resps = getRandomInt(22, 34); pulse = getRandomInt(80, 140);
+            } else if (age <= 12) { // School-age
+                resps = getRandomInt(18, 30); pulse = getRandomInt(70, 120);
+            } else { // Adult
+                resps = getRandomInt(10, 28); pulse = getRandomInt(50, 130);
+            }
+            conscious = 'Alert';
+
+            const roles = { RTC: ['Driver', 'Front Passenger', 'Rear Passenger', 'Pedestrian', 'Motorcyclist'], Train: ['Passenger', 'Train Staff', 'Platform bystander'], HGV: ['Driver', 'Warehouse Staff', 'Bystander'], Chemical: ['Plant Worker', 'First Responder', 'Nearby Resident'], Fire: ['Resident', 'Office Worker', 'Visitor'], MTFA: ['Shopper', 'Shop Worker', 'Tourist', 'Police Officer'], };
+            const role = pickRandom(roles[incidentType] || ['Civilian']);
+
+            let injuries = [], injuryDescription = '';
+
+            const potentialInjuries = [
+                { type: 'penetrating', location: 'chest', desc: 'Significant open chest injury.' },
+                { type: 'penetrating', location: 'abdomen', desc: 'Penetrating wound to the abdomen.' },
+                { type: 'fracture', location: 'leg', desc: 'Obvious compound fracture to the leg.' },
+                { type: 'fracture', location: 'arm', desc: 'Deformed and swollen arm.' },
+                { type: 'bleeding', location: 'leg', desc: 'Deep laceration to the leg.' },
+                { type: 'bleeding', location: 'arm', desc: 'Arterial bleeding from the arm.' },
+                { type: 'head', location: 'head', desc: 'Significant head trauma evident.' },
+                { type: 'burns', location: 'torso', desc: 'Extensive burns to chest and arms.' },
+            ];
+            
+            if (canWalk) {
+                injuryDescription = pickRandom(["Appears shaken with minor lacerations.", "Complaining of arm pain but is mobile."]);
+            } else {
+                const severity = Math.random();
+                if (severity < 0.1) { 
+                    resps = 0; pulse = getRandomInt(0, 40); conscious = 'Unresponsive'; 
+                    injuries.push(pickRandom(potentialInjuries.filter(i => i.type === 'head')));
+                } else if (severity < 0.4) { 
+                    conscious = consciousLevels[getRandomInt(1,3)]; 
+                    injuries.push(pickRandom(potentialInjuries.filter(i => i.type === 'penetrating')));
+                    if(probability(50)) injuries.push(pickRandom(potentialInjuries.filter(i => i.type === 'bleeding')));
+                } else if (severity < 0.8) { 
+                    conscious = 'Alert';
+                    injuries.push(pickRandom(potentialInjuries.filter(i => i.type === 'fracture')));
+                    if(probability(30)) injuries.push(pickRandom(potentialInjuries.filter(i => i.type === 'bleeding')));
+                } else { 
+                    conscious = 'Alert';
+                    injuryDescription = pickRandom(["Complaining of severe back pain and cannot feel legs.", "Pinned by wreckage but appears calm."]);
+                }
+                 if(injuries.length > 0) {
+                    injuryDescription = injuries.map(i => i.desc).join(' ');
+                 }
+            }
+
+            const hasSevereBleeding = injuries.some(i => i.type === 'bleeding');
+            const hasCatastrophicBleeding = hasSevereBleeding && probability(60);
+            const hasPenetratingInjury = injuries.some(i => i.type === 'penetrating');
+            
+            let isTalking = resps > 0 && (conscious === 'Alert' || conscious === 'Voice');
+            if (conscious === 'Unresponsive' || conscious === 'Pain') isTalking = false;
+
+            return { id, age, sex, role, canWalk, isBreathing: resps > 0, resps, pulse, conscious, airwayClears: probability(50), injuries, triageStatus: 'untriaged', userTstTriage: null, userMittTriage: null, correctTst: null, correctMitt: null, injuryDescription, hasSevereBleeding, isTalking, hasPenetratingInjury, hasCatastrophicBleeding };
+        };
+        
+        const calculateCorrectTst = (c) => {
+            if (c.canWalk) return 'p3';
+            if (c.hasSevereBleeding) return 'p1';
+            if (c.isTalking) {
+                return c.hasPenetratingInjury ? 'p1' : 'p2';
+            }
+            if (c.isBreathing || (!c.isBreathing && c.airwayClears)) {
+                return 'p1';
+            }
+            return 'deceased';
+        };
+
+        const calculateCorrectMitt = (c) => {
+            if (c.hasCatastrophicBleeding) return 'p1';
+            if (c.canWalk) return 'p3';
+            if (!c.isBreathing) {
+                 return c.airwayClears ? 'p1' : 'deceased'; 
+            }
+            const respondsToVoice = c.conscious === 'Alert' || c.conscious === 'Voice';
+            if (!respondsToVoice) return 'p1';
+            if (c.age <= 2) return 'p1';
+            if (c.resps < 12 || c.resps > 23) return 'p1';
+            if (c.pulse < 60 || c.pulse > 119) return 'p2';
+            return 'p2';
+        };
+
+        // --- UI Rendering ---
+        const generateCasualtySvg = (casualty, options = { large: false, includeKey: false }) => {
+            let markers = '';
+            const locations = {
+                head: { x: 50, y: 20 },
+                chest: { x: 50, y: 55 },
+                abdomen: { x: 50, y: 75 },
+                arm: { x: 25, y: 65 },
+                leg: { x: 35, y: 115 },
+                torso: { x: 50, y: 65 },
+            };
+
+            const scale = options.large ? 2 : 1;
+            const strokeWidth = options.large ? 1.5 : 2;
+            const locationOffsets = {};
+
+            casualty.injuries.forEach(injury => {
+                const pos = locations[injury.location] || locations.abdomen;
+                const count = locationOffsets[injury.location] || 0;
+                
+                // Apply a horizontal "jitter" offset to avoid markers overlapping
+                const offsetX = (count > 0) ? ((count % 2 === 1 ? 1 : -1) * Math.ceil(count / 2) * 8 * scale) : 0;
+                const finalX = pos.x + offsetX;
+
+                switch(injury.type) {
+                    case 'penetrating':
+                    case 'head': 
+                    case 'burns':
+                        markers += `<circle cx="${finalX}" cy="${pos.y}" r="${5 * scale}" fill="#ef4444" stroke="black" stroke-width="${strokeWidth / 2}"/>`;
+                        break;
+                    case 'bleeding':
+                        markers += `<path d="M ${finalX - (5 * scale)} ${pos.y} Q ${finalX} ${pos.y + (15 * scale)}, ${finalX + (5 * scale)} ${pos.y} Z" fill="#ef4444"/>`;
+                        break;
+                    case 'fracture':
+                         markers += `<text x="${finalX - (5 * scale)}" y="${pos.y + (5 * scale)}" font-weight="bold" font-size="${16 * scale}px">#</text>`;
+                        break;
+                }
+                locationOffsets[injury.location] = count + 1;
+            });
+            
+            let key = '';
+            if (options.includeKey) {
+                key = `
+                    <g transform="translate(5, 160)" font-size="9px" font-family="Inter, sans-serif">
+                        <circle cx="5" cy="5" r="5" fill="#ef4444"></circle>
+                        <text x="15" y="9">
+                            <tspan>Penetrating/</tspan>
+                            <tspan x="15" dy="10">Head/Burn</tspan>
+                        </text>
+                        <path d="M 5 35 Q 10 50, 15 35 Z" fill="#ef4444"></path>
+                        <text x="25" y="43">Bleeding</text>
+                        <text x="5" y="60" font-weight="bold">#</text>
+                        <text x="15" y="60">Fracture</text>
+                    </g>
+                `;
+            }
+
+            const viewBox = options.large ? "0 0 100 220" : "0 0 100 150";
+
+            return `
+                <svg viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">
+                    <g stroke="black" stroke-width="${strokeWidth}" fill="none">
+                        <circle cx="50" cy="20" r="15"/>
+                        <line x1="50" y1="35" x2="50" y2="90"/>
+                        <line x1="50" y1="50" x2="20" y2="70"/>
+                        <line x1="50" y1="50" x2="80" y2="70"/>
+                        <line x1="50" y1="90" x2="30" y2="140"/>
+                        <line x1="50" y1="90" x2="70" y2="140"/>
+                    </g>
+                    ${markers}
+                    ${key}
+                </svg>
+            `;
+        };
+
+        const renderCasualties = (deterioratedId = null) => {
+            casualtiesContainer.innerHTML = '';
+            casualties.forEach(c => {
+                const card = document.createElement('div');
+                card.id = `casualty-card-${c.id}`;
+                card.className = `casualty-card bg-white p-4 rounded-lg shadow-md border-l-4 ${getBorderColor(c.triageStatus)}`;
+                if (c.id === deterioratedId) {
+                    card.classList.add('deteriorated-flash');
+                }
+                
+                let buttonText = 'Triage Now';
+                if (triageSystem === 'tst_mitt') { 
+                    buttonText = currentPhase === 'tst' ? 'Triage (TST)' : 'Re-Triage (MITT)'; 
+                } else if (triageSystem === 'mitt') {
+                    buttonText = 'Triage (MITT)';
+                } else {
+                    buttonText = 'Triage (TST)';
+                }
+
+                let isButtonDisabled = (currentPhase === 'tst' && c.userTstTriage) || (currentPhase === 'mitt' && c.userMittTriage);
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-lg font-bold">Casualty #${c.id}</h3>
+                        <span id="tag-${c.id}" class="priority-tag ${c.triageStatus !== 'untriaged' ? getTagColor(c.triageStatus) : 'bg-gray-400 text-white'}">${c.triageStatus.toUpperCase()}</span>
+                    </div>
+
+                    <div class="flex mt-2">
+                        <div class="casualty-svg-container flex-shrink-0">
+                           ${generateCasualtySvg(c)}
+                        </div>
+                        <div class="flex-grow">
+                             <p class="text-sm text-gray-600 italic">"${c.injuryDescription}"</p>
+                             <div class="mt-2 pt-2 border-t border-gray-200 text-xs space-y-1">
+                                <p><strong>Details:</strong> ${c.age} y/o ${c.sex}, ${c.role}</p>
+                                <p><strong>Talking:</strong> <span class="${c.isTalking ? 'text-green-700' : 'text-red-700'}">${c.isTalking ? 'Yes' : 'No'}</span></p>
+                                <p><strong>Resps:</strong> ${c.isBreathing ? c.resps + '/min' : 'Not Breathing (Initially)'}</p>
+                                ${!c.isBreathing ? `<p class="pl-2"><strong>&hookrightarrow; After Airway:</strong> <span class="${c.airwayClears ? 'text-green-700' : 'text-red-700'}">${c.airwayClears ? 'Breathing' : 'Apnoeic'}</span></p>` : ''}
+                                <p><strong>HR:</strong> ${c.pulse > 0 ? c.pulse + ' bpm' : 'None'}</p>
+                             </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <button data-id="${c.id}" class="triage-button w-full bg-blue-500 text-white font-semibold py-2 px-4 rounded hover:bg-blue-600 disabled:bg-gray-300" ${isButtonDisabled ? 'disabled' : ''}>
+                            ${isButtonDisabled ? 'Triaged' : buttonText}
+                        </button>
+                    </div>`;
+                casualtiesContainer.appendChild(card);
+            });
+            updateSummaryStats();
+        };
+        
+        const getBorderColor = (status) => {
+             switch(status) { case 'p1': return 'border-red-500'; case 'p2': return 'border-amber-500'; case 'p3': return 'border-green-500'; case 'deceased': return 'border-gray-800'; default: return 'border-gray-400'; }
+        }
+        const getTagColor = (status) => {
+             switch(status) { case 'p1': return 'p1'; case 'p2': return 'p2'; case 'p3': return 'p3'; case 'deceased': return 'deceased'; default: return 'bg-gray-400 text-white'; }
+        }
+
+        const updateSummaryStats = () => {
+            p1Count.textContent = casualties.filter(c => c.triageStatus === 'p1').length;
+            p2Count.textContent = casualties.filter(c => c.triageStatus === 'p2').length;
+            p3Count.textContent = casualties.filter(c => c.triageStatus === 'p3').length;
+            deceasedCount.textContent = casualties.filter(c => c.triageStatus === 'deceased').length;
+            untriagedCount.textContent = casualties.filter(c => c.triageStatus === 'untriaged').length;
+        };
+
+        // --- Simulation Logic ---
+        const startSimulation = () => {
+            const incidentType = incidentTypeSelect.value;
+            const casualtyCount = parseInt(casualtyCountInput.value) || 0;
+            const report = generateMethaneReport(incidentType, parseInt(vehicleCountInput.value), casualtyCount);
+            
+            methaneReport.innerHTML = `<p><strong>M</strong>ajor Incident: <strong>Declared</strong></p><p><strong>E</strong>xact Location: <strong>${report.location}</strong></p><p><strong>T</strong>ype of Incident: <strong>${report.type}</strong></p><p><strong>H</strong>azards: <strong>${report.hazards}</strong></p><p><strong>A</strong>ccess: <strong>${report.access}</strong></p><p><strong>N</strong>umber of Casualties: Approx. <strong>${casualtyCount}</strong></p><p><strong>E</strong>mergency Services: <strong>Fire & Rescue on scene. Ambulance and Police en route.</strong></p>`;
+            
+            casualties = [];
+            for (let i = 1; i <= casualtyCount; i++) {
+                try {
+                    const casualty = generateCasualty(i, incidentType);
+                    casualty.correctTst = calculateCorrectTst(casualty);
+                    casualty.correctMitt = calculateCorrectMitt(casualty);
+                    casualties.push(casualty);
+                } catch (e) { console.error(`Error generating casualty #${i}:`, e); }
+            }
+             simTitle.textContent = `${incidentType.replace(/([A-Z])/g, ' $1').trim()}`;
+             simSubtitle.textContent = `${casualtyCount} casualties reported.`;
+            
+            let systemText = "";
+            if (triageSystem === 'tst_mitt') systemText = "TST & MITT";
+            else if (triageSystem === 'mitt') systemText = "MITT Only";
+            else systemText = "TST Only";
+            
+            simTitle.textContent += ` (${systemText})`;
+            
+            startMittButton.classList.add('hidden'); 
+            
+            if (triageSystem === 'tst_mitt') {
+                currentPhase = 'tst';
+                phaseDisplay.classList.remove('hidden'); 
+                phaseText.textContent = "Phase 1: Perform Ten-Second Triage (TST) on all casualties."; 
+            } else if (triageSystem === 'mitt') {
+                currentPhase = 'mitt';
+                phaseDisplay.classList.remove('hidden');
+                phaseText.textContent = "Perform Triage Sort (MITT) on all casualties.";
+            } else {
+                currentPhase = 'tst';
+                phaseDisplay.classList.add('hidden');
+            }
+
+            if (timerInterval) clearInterval(timerInterval);
+            if (currentMode === 'test') {
+                secondsElapsed = 0; timer.textContent = '00:00'; timerDisplay.classList.remove('hidden');
+                timerInterval = setInterval(() => { secondsElapsed++; const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0'); const secs = (secondsElapsed % 60).toString().padStart(2, '0'); timer.textContent = `${mins}:${secs}`; }, 1000);
+            } else { timerDisplay.classList.add('hidden'); }
+
+            setupScreen.classList.add('hidden'); simulationScreen.classList.remove('hidden');
+            renderCasualties();
+        };
+
+        const generateMethaneReport = (incidentType, vehicleCount, casualtyCount) => {
+            const locations = { RTC: "Junction 15, M1 Motorway", Train: "Watford West Station", HGV: "A41 Industrial Estate", Chemical: "Borehamwood Chemical Plant", Fire: "Elstree High Rise Tower", MTFA: "Central London Shopping Arcade" };
+            const hazards = { RTC: "Fuel spillage, unstable vehicles, sharp debris.", Train: "Overhead power lines, structural damage, panicked crowds.", HGV: "Unidentified cargo, risk of fire, vehicle instability.", Chemical: "Toxic plume (wind from North), risk of explosion.", Fire: "Smoke logging, structural collapse, falling debris.", MTFA: "Active shooter threat, potential IEDs." };
+            const accessPoints = { RTC: "Southbound carriageway is closed, access via slip road.", Train: "Main station entrance blocked, use rear service entrance.", HGV: "Approach from east, upwind of incident.", Chemical: "Cordon in place, entry via RVP only.", Fire: "Access from North street, South street blocked.", MTFA: "Police cordon in place, await instruction." };
+            return { location: locations[incidentType], type: `${vehicleCount}-vehicle ${incidentType}`, hazards: hazards[incidentType], access: accessPoints[incidentType] };
+        };
+        
+        const endSimulation = () => {
+            if (timerInterval) clearInterval(timerInterval);
+
+            let correctCount = 0, overTriaged = 0, underTriaged = 0;
+            
+            // Logic: If we are in MITT phase (either MITT-only or Phase 2 of TST/MITT), verify against MITT correct values
+            const isMittPhaseActive = currentPhase === 'mitt';
+            const userTriageProperty = isMittPhaseActive ? 'userMittTriage' : 'userTstTriage';
+            const correctTriageProperty = isMittPhaseActive ? 'correctMitt' : 'correctTst';
+
+            const triagedCasualties = casualties.filter(c => c[userTriageProperty] !== null);
+
+            reportDetails.innerHTML = ''; 
+            triagedCasualties.forEach(c => {
+                const userTriage = c[userTriageProperty];
+                const correctTriage = c[correctTriageProperty];
+                const priorityMap = { p1: 1, p2: 2, p3: 3, deceased: 4 };
+                let detail = 'Correct';
+                if (userTriage === correctTriage) { 
+                    correctCount++; 
+                } else {
+                    const userP = priorityMap[userTriage] ?? -1, correctP = priorityMap[correctTriage] ?? -1;
+                    if (userP !== -1 && correctP !== -1 && userP < correctP) { 
+                        overTriaged++; 
+                        detail = `Over-triaged (User: ${userTriage.toUpperCase()}, Correct: ${correctTriage.toUpperCase()})`; 
+                    } else { 
+                        underTriaged++; 
+                        detail = `Under-triaged (User: ${userTriage.toUpperCase()}, Correct: ${correctTriage.toUpperCase()})`; 
+                    }
+                }
+                const reportItem = document.createElement('div');
+                reportItem.className = 'p-2 border rounded-md text-sm';
+                reportItem.innerHTML = `<strong>Casualty #${c.id}:</strong> ${detail}`;
+                reportDetails.appendChild(reportItem);
+            });
+            const accuracy = triagedCasualties.length > 0 ? ((correctCount / triagedCasualties.length) * 100).toFixed(1) : 0;
+            if (currentMode === 'test') {
+                testReportMetrics.classList.remove('hidden');
+                const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+                const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+                reportTime.textContent = `${mins}:${secs}`; reportAccuracy.textContent = `${accuracy}%`;
+                reportSummary.textContent = `You triaged ${triagedCasualties.length} of ${casualties.length}. Correct: ${correctCount}, Over: ${overTriaged}, Under: ${underTriaged}.`;
+            } else { 
+                testReportMetrics.classList.add('hidden'); 
+                reportSummary.textContent = `You triaged ${triagedCasualties.length} of ${casualties.length}. Accuracy: ${accuracy}%. Correct: ${correctCount}, Over-triaged: ${overTriaged}, Under: ${underTriaged}.`; 
+            }
+            reportModal.classList.remove('hidden');
+        };
+        
+        const resetToMenu = () => {
+             simulationScreen.classList.add('hidden'); setupScreen.classList.remove('hidden');
+             casualties = []; casualtiesContainer.innerHTML = '';
+             if (timerInterval) clearInterval(timerInterval);
+        }
+
+        // --- Modal Logic ---
+        const openTriageModal = (casualty) => {
+            currentCasualty = casualty;
+            modalCasualtyId.textContent = `#${casualty.id}`;
+            modalInjuryDescription.textContent = casualty.injuryDescription;
+
+            modalSvgContainer.innerHTML = generateCasualtySvg(casualty, { large: true, includeKey: true });
+
+            modalPatientDetails.innerHTML = `
+                <div><strong>Age:</strong> ${casualty.age}</div>
+                <div><strong>Sex:</strong> ${casualty.sex}</div>
+                <div class="col-span-2"><strong>Role:</strong> ${casualty.role}</div>
+                <div><strong>Cat. Bleed:</strong> <span class="${casualty.hasCatastrophicBleeding ? 'text-red-700 font-semibold' : ''}">${casualty.hasCatastrophicBleeding ? 'Yes' : 'No'}</span></div>
+                <div><strong>Talking:</strong> <span class="${casualty.isTalking ? 'text-green-700 font-semibold' : 'text-red-700 font-semibold'}">${casualty.isTalking ? 'Yes' : 'No'}</span></div>
+                <div><strong>Mobility:</strong> <span class="${casualty.canWalk ? 'text-green-700 font-semibold' : 'text-red-700 font-semibold'}">${casualty.canWalk ? 'Walking' : 'Not Walking'}</span></div>
+                <div><strong>HR:</strong> ${casualty.pulse > 0 ? casualty.pulse + ' bpm' : 'None'}</div>
+                <div class="col-span-2"><strong>Respirations:</strong> ${casualty.isBreathing ? casualty.resps + '/min' : 'Not Breathing (Initially)'}</div>
+                ${!casualty.isBreathing ? `<div class="col-span-2"><strong>&hookrightarrow; After Airway:</strong> <span class="${casualty.airwayClears ? 'text-green-700 font-semibold' : 'text-red-700 font-semibold'}">${casualty.airwayClears ? 'Breathing now' : 'Remains apnoeic'}</span></div>` : ''}
+            `;
+            resetModal();
+            triageModal.classList.remove('hidden');
+        };
+
+        const closeModal = () => { triageModal.classList.add('hidden'); currentCasualty = null; };
+        
+        const resetModal = () => {
+            resultSection.classList.add('hidden');
+            feedbackExplanation.innerHTML = '';
+            
+            let title = 'Triage Sieve (TST)';
+            if (triageSystem === 'mitt' || currentPhase === 'mitt') {
+                title = 'Triage Sort (MITT)';
+            }
+            
+            if (currentMode === 'teach') {
+                testSection.classList.add('hidden'); tstSection.classList.remove('hidden');
+                tstSectionTitle.textContent = title;
+                const isMittPhase = (triageSystem === 'tst_mitt' && currentPhase === 'mitt') || triageSystem === 'mitt';
+
+                // Hide all questions first
+                const allQuestions = ['tst-walking', 'tst-bleeding', 'tst-talking', 'tst-penetrating', 'mitt-catastrophic-bleeding', 'tst-breathing', 'mitt-responds-voice', 'mitt-age', 'mitt-resp-rate', 'mitt-hr'];
+                allQuestions.forEach(id => document.getElementById(id).classList.add('hidden'));
+
+                // Show the first question based on phase
+                if (isMittPhase) {
+                    document.getElementById('mitt-catastrophic-bleeding').classList.remove('hidden');
+                } else { // TST phase
+                    document.getElementById('tst-walking').classList.remove('hidden');
+                }
+
+            } else { // Test Mode
+                tstSection.classList.add('hidden'); testSection.classList.remove('hidden');
+                testSectionTitle.textContent = title;
+                document.querySelector('[data-triage-choice="p2"]').style.display = '';
+            }
+        }
+
+        const showResult = (priority, reason) => {
+            if (currentPhase === 'tst') { currentCasualty.userTstTriage = priority; } 
+            else { currentCasualty.userMittTriage = priority; }
+            
+            resultTag.className = `mx-auto w-fit priority-tag text-lg px-6 py-2 ${getTagColor(priority)}`;
+            resultTag.textContent = priority.toUpperCase(); resultReason.textContent = reason;
+            
+            const correctTriage = (triageSystem === 'tst' || currentPhase === 'tst') ? currentCasualty.correctTst : currentCasualty.correctMitt;
+            const isCorrect = priority === correctTriage;
+
+            if (isCorrect) {
+                correctnessFeedback.textContent = 'Correct!';
+                feedbackSection.className = 'mt-4 text-left p-3 rounded-lg bg-green-100';
+                correctnessFeedback.className = 'font-bold text-lg feedback-correct';
+                feedbackExplanation.innerHTML = '';
+            } else {
+                correctnessFeedback.textContent = `Incorrect. Correct triage is ${correctTriage.toUpperCase()}.`;
+                feedbackSection.className = 'mt-4 text-left p-3 rounded-lg bg-red-100';
+                correctnessFeedback.className = 'font-bold text-lg feedback-incorrect';
+                const isMittExplanation = currentPhase === 'mitt';
+                feedbackExplanation.innerHTML = isMittExplanation ? generateMittExplanation(currentCasualty) : generateTstExplanation(currentCasualty);
+            }
+
+            tstSection.classList.add('hidden');
+            testSection.classList.add('hidden');
+            resultSection.classList.remove('hidden');
+        }
+
+        const generateTstExplanation = (c) => {
+            let exp = '<p class="font-semibold">TST Pathway:</p>';
+            if (c.canWalk) { exp += '<div><span class="font-bold">1. Walk?</span> YES &rarr; <strong class="text-green-700">P3</strong></div>'; return exp; }
+            exp += '<div><span class="font-bold">1. Walk?</span> NO &rarr; Continue.</div>';
+            if (c.hasSevereBleeding) { exp += '<div><span class="font-bold">2. Severe Bleeding?</span> YES &rarr; <strong class="text-red-700">P1</strong></div>'; return exp; }
+            exp += '<div><span class="font-bold">2. Severe Bleeding?</span> NO &rarr; Continue.</div>';
+            if (c.isTalking) {
+                exp += '<div><span class="font-bold">3. Talking?</span> YES &rarr; Check penetrating injury.</div>';
+                exp += c.hasPenetratingInjury ? '<div><span class="font-bold">4. Penetrating Injury?</span> YES &rarr; <strong class="text-red-700">P1</strong></div>' : '<div><span class="font-bold">4. Penetrating Injury?</span> NO &rarr; <strong class="text-amber-700">P2</strong></div>';
+                return exp;
+            }
+            exp += '<div><span class="font-bold">3. Talking?</span> NO &rarr; Check breathing.</div>';
+            if (!c.isBreathing && !c.airwayClears) { exp += `<div><span class="font-bold">4. Breathing?</span> NO &rarr; Airway... Not Breathing &rarr; <strong class="text-gray-800">DECEASED</strong></div>`; return exp; }
+            exp += '<div><span class="font-bold">4. Breathing?</span> YES (or restored) &rarr; <strong class="text-red-700">P1</strong></div>';
+            return exp;
+        };
+
+        const generateMittExplanation = (c) => {
+            let exp = '<p class="font-semibold">MITT Pathway:</p>';
+            if (c.hasCatastrophicBleeding) { exp += '<div><span class="font-bold">1. Cat. Bleeding?</span> YES &rarr; <strong class="text-red-700">P1</strong></div>'; return exp; }
+            exp += '<div><span class="font-bold">1. Cat. Bleeding?</span> NO &rarr; Continue.</div>';
+            if (c.canWalk) { exp += '<div><span class="font-bold">2. Walk?</span> YES &rarr; <strong class="text-green-700">P3</strong></div>'; return exp; }
+            exp += '<div><span class="font-bold">2. Walk?</span> NO &rarr; Continue.</div>';
+            if (!c.isBreathing && !c.airwayClears) { exp += `<div><span class="font-bold">3. Breathing?</span> NO &rarr; Airway... Not Breathing &rarr; <strong class="text-gray-800">DECEASED</strong></div>`; return exp; }
+            exp += '<div><span class="font-bold">3. Breathing?</span> YES (or restored) &rarr; Continue.</div>';
+            const respondsToVoice = c.conscious === 'Alert' || c.conscious === 'Voice';
+            if (!respondsToVoice) { exp += `<div><span class="font-bold">4. Responds to Voice?</span> NO &rarr; <strong class="text-red-700">P1</strong></div>`; return exp; }
+            exp += '<div><span class="font-bold">4. Responds to Voice?</span> YES &rarr; Continue.</div>';
+            if (c.age <= 2) { exp += '<div><span class="font-bold">5. Age > 2?</span> NO &rarr; <strong class="text-red-700">P1</strong></div>'; return exp; }
+            exp += '<div><span class="font-bold">5. Age > 2?</span> YES &rarr; Continue.</div>';
+            if (c.resps < 12 || c.resps > 23) { exp += `<div><span class="font-bold">6. RR 12-23?</span> NO (${c.resps}) &rarr; <strong class="text-red-700">P1</strong></div>`; return exp; }
+            exp += `<div><span class="font-bold">6. RR 12-23?</span> YES (${c.resps}) &rarr; Continue.</div>`;
+            if (c.pulse < 60 || c.pulse > 119) { exp += `<div><span class="font-bold">7. HR 60-119?</span> NO (${c.pulse}) &rarr; <strong class="text-amber-700">P2</strong></div>`; return exp; }
+            exp += `<div><span class="font-bold">7. HR 60-119?</span> YES (${c.pulse}) &rarr; <strong class="text-amber-700">P2</strong></div>`;
+            return exp;
+        };
+
+        const deteriorateCasualty = () => {
+            const candidates = casualties.filter(c => c.userTstTriage === 'p2' || c.userTstTriage === 'p3');
+            if (candidates.length === 0) return;
+
+            const victim = pickRandom(candidates);
+            victim.conscious = 'Pain';
+            victim.isTalking = false;
+            victim.injuryDescription += " They have become less responsive.";
+            victim.correctMitt = calculateCorrectMitt(victim);
+            
+            renderCasualties(victim.id);
+        };
+
+        // --- Event Listeners ---
+        startSimButton.addEventListener('click', startSimulation);
+        endSimButton.addEventListener('click', endSimulation);
+        viewAlgosButton.addEventListener('click', () => imageModal.classList.remove('hidden'));
+        closeImageModalButton.addEventListener('click', () => imageModal.classList.add('hidden'));
+
+        casualtiesContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('triage-button')) {
+                openTriageModal(casualties.find(c => c.id === parseInt(e.target.dataset.id)));
+            }
+        });
+        
+        startMittButton.addEventListener('click', () => {
+            currentPhase = 'mitt';
+            phaseText.textContent = "Phase 2: Perform Triage Sort (MITT) on all casualties.";
+            startMittButton.classList.add('hidden');
+            
+            deteriorateCasualty();
+
+            casualties.forEach(c => c.triageStatus = c.userTstTriage); // Show initial sieve result
+            renderCasualties();
+        });
+
+        // Setup Screen Selectors
+        [modeSelector, systemSelector].forEach(selector => {
+            selector.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    const type = selector.id.replace('Selector', '');
+                    const value = e.target.dataset[type];
+
+                    if (type === 'mode') currentMode = value;
+                    if (type === 'system') triageSystem = value;
+                    
+                    selector.querySelectorAll('button').forEach(btn => {
+                        const btnValue = btn.dataset[type];
+                        btn.classList.toggle('bg-blue-600', btnValue === value);
+                        btn.classList.toggle('text-white', btnValue === value);
+                        btn.classList.toggle('bg-gray-200', btnValue !== value);
+                        btn.classList.toggle('text-gray-600', btnValue !== value);
+                    });
+                }
+            });
+        });
+        
+        triageModal.addEventListener('click', (e) => {
+            const target = e.target.closest('button');
+            if (!target) return;
+            
+            if (target.id === 'closeModalButton') { closeModal(); return; }
+            if (target.id === 'confirmTriageButton') {
+                 if (!currentCasualty) return;
+                 const priority = currentPhase === 'tst' ? currentCasualty.userTstTriage : currentCasualty.userMittTriage;
+                 if (!priority) return;
+                 
+                 currentCasualty.triageStatus = priority;
+                 renderCasualties();
+                 closeModal();
+
+                 if (triageSystem === 'tst_mitt' && currentPhase === 'tst') {
+                    const allSieved = casualties.every(c => c.userTstTriage !== null);
+                    if (allSieved) startMittButton.classList.remove('hidden');
+                 }
+                 return;
+            }
+            
+            const triageChoice = target.dataset.triageChoice;
+            if (triageChoice) { showResult(triageChoice, `You selected ${triageChoice.toUpperCase()}.`); return; }
+
+            const answer = target.dataset.answer;
+            if (answer) {
+                const isMittTeach = (triageSystem === 'tst_mitt' && currentPhase === 'mitt') || triageSystem === 'mitt';
+                const allQuestions = ['tst-walking', 'tst-bleeding', 'tst-talking', 'tst-penetrating', 'mitt-catastrophic-bleeding', 'tst-breathing', 'mitt-responds-voice', 'mitt-age', 'mitt-resp-rate', 'mitt-hr'];
+                const hideAll = () => allQuestions.forEach(q => document.getElementById(q).classList.add('hidden'));
+
+                hideAll();
+                switch (answer) {
+                    // Shared
+                    case 'walk-yes': showResult('p3', 'Casualty is able to walk.'); break;
+                    case 'walk-no':
+                        if (isMittTeach) { document.getElementById('tst-breathing').classList.remove('hidden'); }
+                        else { document.getElementById('tst-bleeding').classList.remove('hidden'); }
+                        break;
+                    
+                    // TST Flow
+                    case 'bleeding-yes': showResult('p1', 'Severe life-threatening bleeding.'); break;
+                    case 'bleeding-no': document.getElementById('tst-talking').classList.remove('hidden'); break;
+                    case 'talking-yes': document.getElementById('tst-penetrating').classList.remove('hidden'); break;
+                    case 'talking-no': document.getElementById('tst-breathing').classList.remove('hidden'); break;
+                    case 'penetrating-yes': showResult('p1', 'Talking with penetrating torso injury.'); break;
+                    case 'penetrating-no': showResult('p2', 'Talking with no penetrating torso injury.'); break;
+                    
+                    // MITT Flow
+                    case 'cat-bleed-yes': showResult('p1', 'Catastrophic bleeding.'); break;
+                    case 'cat-bleed-no': document.getElementById('tst-walking').classList.remove('hidden'); break;
+                    
+                    // Shared Breathing Logic
+                    case 'breathe-yes': 
+                        if (isMittTeach) { document.getElementById('mitt-responds-voice').classList.remove('hidden'); }
+                        else { showResult('p1', 'Not talking, but breathing.'); }
+                        break;
+                    case 'breathe-no': 
+                        if (currentCasualty.airwayClears) { showResult('p1', 'Breathing after airway opened.'); } 
+                        else { showResult('deceased', 'Not breathing after airway opened.'); }
+                        break;
+
+                    // Remaining MITT
+                    case 'voice-yes': document.getElementById('mitt-age').classList.remove('hidden'); break;
+                    case 'voice-no': showResult('p1', 'Does not respond to voice.'); break;
+                    case 'age-yes': document.getElementById('mitt-resp-rate').classList.remove('hidden'); break;
+                    case 'age-no': showResult('p1', 'Aged 2 years or under.'); break;
+                    case 'rr-yes': document.getElementById('mitt-hr').classList.remove('hidden'); break;
+                    case 'rr-no': showResult('p1', 'Breathing rate outside 12-23.'); break;
+                    case 'hr-yes': showResult('p2', 'Passed all P1 checks.'); break;
+                    case 'hr-no': showResult('p2', 'Heart rate outside 60-119.'); break;
+                }
+                return;
+            }
+        });
+        
+        closeReportButton.addEventListener('click', () => { reportModal.classList.add('hidden'); resetToMenu(); });
+    });
+    </script>
+</body>
+</html>
+
