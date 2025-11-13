@@ -262,12 +262,10 @@
                 </div>
             </div>
 
-            <div class="mb-4 flex justify-between items-center">
-                <label class="flex items-center cursor-pointer">
-                    <input type="checkbox" id="showClinicalImages" class="mr-2 h-4 w-4">
-                    <span class="text-sm font-medium text-gray-700">Show Clinical Findings</span>
-                </label>
-            </div>
+            <!-- 
+              CHANGE: Removed the "Show Clinical Findings" checkbox.
+              This will now be on by default.
+            -->
 
             <div id="methaneReport" class="bg-red-100 border-l-4 border-red-600 p-4 mb-6 rounded-lg text-sm">
             </div>
@@ -413,6 +411,16 @@
                 </div>
                 <div id="reportContent">
                 </div>
+
+                <!-- 
+                  CHANGE: Added input field for certificate name.
+                -->
+                <div class="mt-6 mb-4">
+                    <label for="userNameInput" class="block text-sm font-medium text-gray-700 mb-2">Enter Your Name for Certificate:</label>
+                    <input type="text" id="userNameInput" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., Dr. Jane Doe">
+                </div>
+                <!-- End of change -->
+
                 <div class="flex gap-2 mt-4">
                     <button id="downloadPdfButton" class="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700">📄 Download PDF Certificate</button>
                     <button id="closeReportButton" class="flex-1 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700">Close & Return to Menu</button>
@@ -455,7 +463,7 @@
         const casualtyTimer = document.getElementById('casualtyTimer');
         const speedTimerBar = document.getElementById('speedTimerBar');
         const skipCasualtyButton = document.getElementById('skipCasualtyButton');
-        const showClinicalImagesCheckbox = document.getElementById('showClinicalImages');
+        // CHANGE: Removed checkbox DOM reference
         const downloadPdfButton = document.getElementById('downloadPdfButton');
         
         // --- State Variables ---
@@ -468,11 +476,20 @@
         let timerInterval = null;
         let secondsElapsed = 0;
         let trainingFocus = 'standard'; // 'standard', 'paediatric', 'burns', 'cbrn', 'speed'
-        let showClinicalImages = false;
+        // CHANGE: Set showClinicalImages to true by default
+        let showClinicalImages = true;
         let speedRoundInterval = null;
         let casualtyTimeRemaining = 30;
         let currentCasualtyIndex = 0;
         let simulationStartTime = null;
+
+        // --- WMEBEM Logo for PDF ---
+        // IMPORTANT: You must convert your 'logo.png' to a base64 string
+        // and paste it between the quotes. Use an online tool (search "image to base64").
+        const WMEBEM_LOGO_BASE64 = 'PASTE_YOUR_LOGO_STRING_HERE';
+        // Example (this is just a placeholder, replace it!):
+        // const WMEBEM_LOGO_BASE64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==';
+        // ---
 
         // Incident types by environment
         const incidentTypes = {
@@ -823,6 +840,8 @@
                 ],
                 Blast: [
                     { type: 'severe', location: 'chest', desc: 'Primary blast lung injury with haemoptysis.' },
+                    /* FIX: Corrected typo 'type:s:' to 'type:'
+                    */
                     { type: 'severe', location: 'chest', desc: 'Bilateral pneumothoraces from barotrauma.' },
                     { type: 'penetrating', location: 'torso', desc: 'Multiple penetrating injuries from shrapnel.' },
                     { type: 'penetrating', location: 'chest', desc: 'Embedded metallic fragments in chest wall.' },
@@ -1620,18 +1639,18 @@
                 detailsHtml += `<div class="col-span-2"><strong>Condition:</strong> ${casualty.preExistingCondition}</div>`;
             }
             
-            // Add clinical findings if enabled
-            if (showClinicalImages) {
-                const findings = getClinicalFindings(casualty);
-                if (findings.length > 0) {
-                    detailsHtml += `<div class="col-span-2 mt-2 pt-2 border-t border-gray-300">
-                        <strong>Clinical Findings:</strong>
-                        <ul class="text-xs mt-1 ml-4 list-disc">
-                            ${findings.map(f => `<li>${f}</li>`).join('')}
-                        </ul>
-                    </div>`;
-                }
+            // CHANGE: Removed the 'if (showClinicalImages)' check
+            // Clinical findings will now always be shown.
+            const findings = getClinicalFindings(casualty);
+            if (findings.length > 0) {
+                detailsHtml += `<div class="col-span-2 mt-2 pt-2 border-t border-gray-300">
+                    <strong>Clinical Findings:</strong>
+                    <ul class="text-xs mt-1 ml-4 list-disc">
+                        ${findings.map(f => `<li>${f}</li>`).join('')}
+                    </ul>
+                </div>`;
             }
+            // End of change
             
             document.getElementById('modalPatientDetails').innerHTML = detailsHtml;
             
@@ -1918,6 +1937,9 @@
 
         // PDF Generation
         const generatePDF = () => {
+            // CHANGE: Get user name from the new input field
+            const userName = document.getElementById('userNameInput').value || 'Participant';
+            
             // Check if jsPDF is loaded
             if (typeof jsPDF === 'undefined') {
                 console.error("jsPDF library is not loaded. Please ensure jspdf.umd.min.js is in the correct path.");
@@ -1973,12 +1995,33 @@
             doc.setFont(undefined, 'normal');
             doc.text('WMEBEM - West Midlands Evidence Based Emergency Medicine', 105, 30, { align: 'center' });
             
+            // CHANGE: Add WMEBEM Logo to PDF header
+            try {
+                if (WMEBEM_LOGO_BASE64 && WMEBEM_LOGO_BASE64.startsWith('data:image')) {
+                    // Add logo to the top left corner (x, y, width, height)
+                    doc.addImage(WMEBEM_LOGO_BASE64, 'PNG', 15, 8, 24, 24); 
+                }
+            } catch (e) {
+                console.error("Error adding logo to PDF. Is the base64 string valid?", e);
+            }
+            
             // Certificate section
             doc.setTextColor(0, 0, 0);
             doc.setFontSize(18);
             doc.setFont(undefined, 'bold');
             doc.text('Training Certificate', 105, 55, { align: 'center' });
             
+            // CHANGE: Add user's name
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'normal');
+            doc.text('This certificate is awarded to:', 105, 65, { align: 'center' });
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text(userName, 105, 73, { align: 'center' });
+            
+            // CHANGE: Adjust Y-position for all subsequent content
+            let yPos = 90;
+
             // Date and scenario
             doc.setFontSize(11);
             doc.setFont(undefined, 'normal');
@@ -1987,9 +2030,12 @@
                 month: 'long', 
                 year: 'numeric' 
             });
-            doc.text(`Date: ${currentDate}`, 20, 70);
-            doc.text(`Scenario: ${simTitle.textContent}`, 20, 78);
-            doc.text(`Training System: ${triageSystem === 'tst_mitt' ? 'TST & MITT' : triageSystem.toUpperCase()}`, 20, 86);
+            doc.text(`Date: ${currentDate}`, 20, yPos);
+            yPos += 8;
+            doc.text(`Scenario: ${simTitle.textContent}`, 20, yPos);
+            yPos += 8;
+            doc.text(`Training System: ${triageSystem === 'tst_mitt' ? 'TST & MITT' : triageSystem.toUpperCase()}`, 20, yPos);
+            yPos += 8;
             
             if (trainingFocus !== 'standard') {
                 const focusText = {
@@ -1998,17 +2044,19 @@
                     'cbrn': 'CBRN Focus',
                     'speed': 'Speed Round'
                 };
-                doc.text(`Training Focus: ${focusText[trainingFocus]}`, 20, 94);
+                doc.text(`Training Focus: ${focusText[trainingFocus]}`, 20, yPos);
+                yPos += 8;
             }
             
             if (secondsElapsed > 0) {
                 const mins = Math.floor(secondsElapsed / 60);
                 const secs = secondsElapsed % 60;
-                doc.text(`Time Taken: ${mins} min ${secs} sec`, 20, trainingFocus !== 'standard' ? 102 : 94);
+                doc.text(`Time Taken: ${mins} min ${secs} sec`, 20, yPos);
+                yPos += 8;
             }
             
             // Performance Summary
-            let yPos = trainingFocus !== 'standard' ? 115 : 110;
+            yPos += 15; // Add spacing
             doc.setFontSize(14);
             doc.setFont(undefined, 'bold');
             doc.text('Performance Summary', 20, yPos);
@@ -2088,10 +2136,7 @@
         closeImageModalButton.addEventListener('click', () => imageModal.classList.add('hidden'));
         downloadPdfButton.addEventListener('click', generatePDF);
 
-        // Clinical images toggle
-        showClinicalImagesCheckbox.addEventListener('change', (e) => {
-            showClinicalImages = e.target.checked;
-        });
+        // CHANGE: Removed checkbox event listener
         
         // Speed round skip button
         skipCasualtyButton.addEventListener('click', autoSkipCasualty);
