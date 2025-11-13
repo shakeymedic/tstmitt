@@ -130,13 +130,17 @@
                         <option value="RTC">Road Traffic Collision (RTC)</option>
                         <option value="Train">Train Crash</option>
                         <option value="HGV">HGV Incident</option>
+                        <option value="Blast">Blast Incident</option>
+                        <option value="BuildingCollapse">Building Collapse</option>
+                        <option value="IndustrialExplosion">Industrial Explosion</option>
+                        <option value="CrowdCrush">Stadium/Crowd Crush</option>
                         <option value="Chemical">Chemical Incident (CBRN)</option>
-                        <option valueD="Fire">Major Fire</option>
+                        <option value="Fire">Major Fire</option>
                         <option value="MTFA">Marauding Terrorist Firearms Attack (MTFA)</option>
                     </select>
                 </div>
                 
-                <div class="mb-6">
+                <div id="vehicleCountContainer" class="mb-6">
                     <label for="vehicleCount" class="block text-sm font-medium text-gray-700 mb-2">Number of Vehicles/Carriages</label>
                     <input id="vehicleCount" type="number" value="3" min="1" max="10" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
@@ -153,47 +157,31 @@
         </div>
 
         <div id="simulationScreen" class="hidden">
-            <div class="grid grid-cols-2 md:grid-cols-3 items-center mb-6 gap-4">
-                 <div class="md:col-span-2">
-                    <h2 class="text-2xl font-bold" id="simTitle"></h2>
-                    <p class="text-md text-gray-600" id="simSubtitle"></p>
+            <div class="flex justify-between items-start flex-col md:flex-row gap-4 mb-6">
+                <div>
+                    <h2 id="simTitle" class="text-3xl font-bold text-gray-900"></h2>
+                    <p id="simSubtitle" class="text-lg text-gray-600"></p>
                 </div>
-                <div id="timerDisplay" class="hidden text-right">
-                    <p class="text-lg font-semibold text-gray-700">Time Elapsed</p>
-                    <p class="text-3xl font-bold text-blue-600" id="timer">00:00</p>
+                <div class="flex gap-2">
+                    <button id="viewAlgosButton" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">View Algorithms</button>
+                    <button id="endSimButton" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700">End Simulation</button>
                 </div>
-                <div class="col-span-2 md:col-span-3 flex justify-end items-center flex-wrap gap-4">
-                    <button id="viewAlgosButton" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-4 focus:ring-gray-300 transition">
-                        View Algorithms
-                    </button>
-                    <button id="endSimButton" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 transition">
-                        End Simulation
-                    </button>
-                </div>
-            </div>
-            
-            <div id="phaseDisplay" class="bg-indigo-100 text-indigo-800 p-3 mb-6 rounded-lg shadow text-center hidden">
-                <p id="phaseText" class="font-semibold"></p>
-                <button id="startMittButton" class="hidden mt-2 bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700">
-                    Proceed to MITT Sort
-                </button>
             </div>
 
-            <div id="scenarioBox" class="bg-blue-100 border-l-4 border-blue-500 text-blue-800 p-4 mb-6 rounded-r-lg shadow" role="alert">
-                <p class="font-bold text-lg">METHANE Report</p>
-                <div id="methaneReport" class="mt-2 text-sm"></div>
+            <div id="timerDisplay" class="hidden bg-blue-100 border-l-4 border-blue-600 p-4 mb-4 rounded-lg">
+                <p class="font-semibold text-blue-800">Time Elapsed: <span id="timer" class="font-mono text-2xl">00:00</span></p>
             </div>
 
-            <div class="bg-gray-200 p-4 rounded-lg mb-6 text-center">
-                <div class="flex justify-between items-center flex-wrap">
-                    <h3 class="text-xl font-semibold mb-2 md:mb-0">Triage Summary</h3>
-                    <div id="legend" class="flex gap-4 text-xs text-gray-700">
-                        <span><svg class="inline-block" width="10" height="10"><circle cx="5" cy="5" r="5" fill="#ef4444"></circle></svg> Penetrating</span>
-                        <span><svg class="inline-block" width="10" height="10"><path d="M5 0 L0 5 L10 5 Z" fill="#ef4444" transform="rotate(180 5 2.5)"></path></svg> Bleeding</span>
-                        <span class="font-bold">#</span> Fracture
-                    </div>
-                </div>
-                 <div id="summaryStats" class="flex justify-center gap-4 md:gap-8 mt-2 text-white flex-wrap">
+            <div id="phaseDisplay" class="hidden bg-amber-100 border-l-4 border-amber-600 p-4 mb-4 rounded-lg">
+                <p id="phaseText" class="font-semibold text-amber-800"></p>
+                <button id="startMittButton" class="hidden mt-2 bg-amber-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-700">Start MITT Phase</button>
+            </div>
+
+            <div id="methaneReport" class="bg-red-100 border-l-4 border-red-600 p-4 mb-6 rounded-lg text-sm">
+            </div>
+
+            <div class="mb-4">
+                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-white text-xs font-semibold">
                     <div class="p-3 rounded-lg p1 flex-grow text-center">P1: <span id="p1Count">0</span></div>
                     <div class="p-3 rounded-lg p2 flex-grow text-center">P2: <span id="p2Count">0</span></div>
                     <div class="p-3 rounded-lg p3 flex-grow text-center">P3: <span id="p3Count">0</span></div>
@@ -318,17 +306,14 @@
                         <p id="correctnessFeedback" class="font-bold text-lg"></p>
                         <div id="feedbackExplanation" class="mt-2 text-sm space-y-1"></div>
                     </div>
-                    <div class="mt-6">
-                        <button id="confirmTriageButton" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700">Confirm & Continue</button>
-                    </div>
+                    <button id="confirmTriageButton" class="mt-4 w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700">Confirm & Continue</button>
                 </div>
-
             </div>
         </div>
-        
-         <div id="reportModal" class="modal-overlay hidden">
+
+        <div id="reportModal" class="modal-overlay hidden">
             <div class="modal-content">
-                <h3 class="text-2xl font-bold mb-4">Simulation Report</h3>
+                <h2 class="text-2xl font-bold mb-4 text-center">Simulation Complete</h2>
                 <div id="testReportMetrics" class="hidden grid grid-cols-2 gap-4 mb-4 text-center">
                     <div>
                         <p class="text-sm font-medium text-gray-500">Time Taken</p>
@@ -375,6 +360,7 @@
         const viewAlgosButton = document.getElementById('viewAlgosButton');
         const incidentTypeSelect = document.getElementById('incidentType');
         const vehicleCountInput = document.getElementById('vehicleCount');
+        const vehicleCountContainer = document.getElementById('vehicleCountContainer');
         const casualtyCountInput = document.getElementById('casualtyCountInput');
         const casualtiesContainer = document.getElementById('casualtiesContainer');
         const simTitle = document.getElementById('simTitle');
@@ -440,6 +426,21 @@
         const probability = (percent) => Math.random() < (percent / 100);
         const pickRandom = (arr) => arr[getRandomInt(0, arr.length - 1)];
 
+        // Incidents that should show vehicle count
+        const vehicleIncidents = ['RTC', 'Train'];
+        
+        // Update vehicle count visibility when incident type changes
+        incidentTypeSelect.addEventListener('change', () => {
+            const incidentType = incidentTypeSelect.value;
+            if (vehicleIncidents.includes(incidentType)) {
+                vehicleCountContainer.classList.remove('hidden');
+                const label = vehicleCountContainer.querySelector('label');
+                label.textContent = incidentType === 'Train' ? 'Number of Carriages' : 'Number of Vehicles';
+            } else {
+                vehicleCountContainer.classList.add('hidden');
+            }
+        });
+
         // --- Casualty Generation ---
         const generateCasualty = (id, incidentType) => {
             const consciousLevels = ['Alert', 'Voice', 'Pain', 'Unresponsive'];
@@ -463,54 +464,175 @@
             }
             conscious = 'Alert';
 
-            const roles = { RTC: ['Driver', 'Front Passenger', 'Rear Passenger', 'Pedestrian', 'Motorcyclist'], Train: ['Passenger', 'Train Staff', 'Platform bystander'], HGV: ['Driver', 'Warehouse Staff', 'Bystander'], Chemical: ['Plant Worker', 'First Responder', 'Nearby Resident'], Fire: ['Resident', 'Office Worker', 'Visitor'], MTFA: ['Shopper', 'Shop Worker', 'Tourist', 'Police Officer'], };
+            // Incident-specific roles
+            const roles = { 
+                RTC: ['Driver', 'Front Passenger', 'Rear Passenger', 'Pedestrian', 'Motorcyclist'], 
+                Train: ['Passenger', 'Train Staff', 'Platform Bystander'], 
+                HGV: ['HGV Driver', 'Warehouse Staff', 'Bystander'], 
+                Blast: ['Nearby Civilian', 'Shopper', 'Office Worker', 'First Responder'],
+                BuildingCollapse: ['Resident', 'Construction Worker', 'Visitor', 'Passer-by'],
+                IndustrialExplosion: ['Factory Worker', 'Maintenance Staff', 'Supervisor', 'Security Guard'],
+                CrowdCrush: ['Spectator', 'Steward', 'Vendor', 'Security Staff'],
+                Chemical: ['Plant Worker', 'First Responder', 'Nearby Resident'], 
+                Fire: ['Resident', 'Office Worker', 'Visitor', 'Shop Staff'], 
+                MTFA: ['Shopper', 'Shop Worker', 'Tourist', 'Police Officer']
+            };
             const role = pickRandom(roles[incidentType] || ['Civilian']);
 
             let injuries = [], injuryDescription = '';
 
-            const potentialInjuries = [
-                { type: 'penetrating', location: 'chest', desc: 'Significant open chest injury.' },
-                { type: 'penetrating', location: 'abdomen', desc: 'Penetrating wound to the abdomen.' },
-                { type: 'fracture', location: 'leg', desc: 'Obvious compound fracture to the leg.' },
-                { type: 'fracture', location: 'arm', desc: 'Deformed and swollen arm.' },
-                { type: 'bleeding', location: 'leg', desc: 'Deep laceration to the leg.' },
-                { type: 'bleeding', location: 'arm', desc: 'Arterial bleeding from the arm.' },
-                { type: 'head', location: 'head', desc: 'Significant head trauma evident.' },
-                { type: 'burns', location: 'torso', desc: 'Extensive burns to chest and arms.' },
-            ];
+            // Incident-specific injury patterns
+            const potentialInjuries = getInjuriesForIncident(incidentType);
             
             if (canWalk) {
-                injuryDescription = pickRandom(["Appears shaken with minor lacerations.", "Complaining of arm pain but is mobile."]);
+                injuryDescription = getMinorInjuryDescription(incidentType);
             } else {
                 const severity = Math.random();
-                if (severity < 0.1) { 
+                if (severity < 0.1) { // Critical - not breathing
                     resps = 0; pulse = getRandomInt(0, 40); conscious = 'Unresponsive'; 
-                    injuries.push(pickRandom(potentialInjuries.filter(i => i.type === 'head')));
-                } else if (severity < 0.4) { 
+                    injuries.push(pickRandom(potentialInjuries.filter(i => i.type === 'head' || i.type === 'critical')));
+                } else if (severity < 0.4) { // Severe
                     conscious = consciousLevels[getRandomInt(1,3)]; 
-                    injuries.push(pickRandom(potentialInjuries.filter(i => i.type === 'penetrating')));
+                    injuries.push(pickRandom(potentialInjuries.filter(i => i.type === 'penetrating' || i.type === 'severe')));
                     if(probability(50)) injuries.push(pickRandom(potentialInjuries.filter(i => i.type === 'bleeding')));
-                } else if (severity < 0.8) { 
+                } else if (severity < 0.8) { // Moderate
                     conscious = 'Alert';
-                    injuries.push(pickRandom(potentialInjuries.filter(i => i.type === 'fracture')));
+                    injuries.push(pickRandom(potentialInjuries.filter(i => i.type === 'fracture' || i.type === 'moderate')));
                     if(probability(30)) injuries.push(pickRandom(potentialInjuries.filter(i => i.type === 'bleeding')));
-                } else { 
+                } else { // Entrapment/spinal
                     conscious = 'Alert';
-                    injuryDescription = pickRandom(["Complaining of severe back pain and cannot feel legs.", "Pinned by wreckage but appears calm."]);
+                    injuryDescription = getEntrapmentDescription(incidentType);
                 }
-                 if(injuries.length > 0) {
+                if(injuries.length > 0) {
                     injuryDescription = injuries.map(i => i.desc).join(' ');
-                 }
+                }
             }
 
             const hasSevereBleeding = injuries.some(i => i.type === 'bleeding');
             const hasCatastrophicBleeding = hasSevereBleeding && probability(60);
-            const hasPenetratingInjury = injuries.some(i => i.type === 'penetrating');
+            const hasPenetratingInjury = injuries.some(i => i.type === 'penetrating' || i.type === 'severe');
             
             let isTalking = resps > 0 && (conscious === 'Alert' || conscious === 'Voice');
             if (conscious === 'Unresponsive' || conscious === 'Pain') isTalking = false;
 
-            return { id, age, sex, role, canWalk, isBreathing: resps > 0, resps, pulse, conscious, airwayClears: probability(50), injuries, triageStatus: 'untriaged', userTstTriage: null, userMittTriage: null, correctTst: null, correctMitt: null, injuryDescription, hasSevereBleeding, isTalking, hasPenetratingInjury, hasCatastrophicBleeding };
+            return { 
+                id, age, sex, role, canWalk, 
+                isBreathing: resps > 0, resps, pulse, conscious, 
+                airwayClears: probability(50), injuries, 
+                triageStatus: 'untriaged', 
+                userTstTriage: null, userMittTriage: null, 
+                correctTst: null, correctMitt: null, 
+                injuryDescription, hasSevereBleeding, isTalking, 
+                hasPenetratingInjury, hasCatastrophicBleeding 
+            };
+        };
+
+        // Get incident-appropriate injuries
+        const getInjuriesForIncident = (incidentType) => {
+            const baseInjuries = [
+                { type: 'head', location: 'head', desc: 'Significant head trauma evident.' },
+                { type: 'bleeding', location: 'leg', desc: 'Deep laceration to the leg.' },
+                { type: 'bleeding', location: 'arm', desc: 'Arterial bleeding from the arm.' },
+                { type: 'fracture', location: 'leg', desc: 'Obvious compound fracture to the leg.' },
+                { type: 'fracture', location: 'arm', desc: 'Deformed and swollen arm.' },
+            ];
+
+            const incidentSpecific = {
+                RTC: [
+                    { type: 'severe', location: 'chest', desc: 'Flail chest with respiratory distress.' },
+                    { type: 'fracture', location: 'leg', desc: 'Bilateral femoral fractures.' },
+                    { type: 'head', location: 'head', desc: 'Severe head injury with bleeding from ears.' }
+                ],
+                Train: [
+                    { type: 'severe', location: 'torso', desc: 'Crush injury to chest and abdomen.' },
+                    { type: 'fracture', location: 'leg', desc: 'Traumatic amputation below knee.' },
+                    { type: 'severe', location: 'abdomen', desc: 'Penetrating abdominal injury with evisceration.' }
+                ],
+                HGV: [
+                    { type: 'severe', location: 'chest', desc: 'Crushed chest with paradoxical movement.' },
+                    { type: 'fracture', location: 'leg', desc: 'Open pelvic fracture.' },
+                    { type: 'severe', location: 'head', desc: 'Depressed skull fracture.' }
+                ],
+                Blast: [
+                    { type: 'severe', location: 'chest', desc: 'Primary blast lung injury with haemoptysis.' },
+                    { type: 'penetrating', location: 'torso', desc: 'Multiple penetrating injuries from shrapnel.' },
+                    { type: 'severe', location: 'abdomen', desc: 'Suspected hollow viscus perforation.' },
+                    { type: 'burns', location: 'torso', desc: 'Extensive flash burns to face and arms.' },
+                    { type: 'fracture', location: 'leg', desc: 'Traumatic amputation with tourniquetable bleeding.' },
+                    { type: 'critical', location: 'head', desc: 'Blast injury with tympanic membrane rupture and disorientation.' }
+                ],
+                BuildingCollapse: [
+                    { type: 'severe', location: 'chest', desc: 'Crush injury with respiratory compromise.' },
+                    { type: 'fracture', location: 'leg', desc: 'Bilateral lower limb fractures from entrapment.' },
+                    { type: 'severe', location: 'abdomen', desc: 'Abdominal crush injury with rigid abdomen.' },
+                    { type: 'critical', location: 'head', desc: 'Head injury with decreasing GCS.' }
+                ],
+                IndustrialExplosion: [
+                    { type: 'burns', location: 'torso', desc: 'Full-thickness burns to chest and face.' },
+                    { type: 'severe', location: 'chest', desc: 'Blast lung with respiratory distress.' },
+                    { type: 'penetrating', location: 'abdomen', desc: 'Penetrating abdominal injury from flying debris.' },
+                    { type: 'critical', location: 'head', desc: 'Inhalational injury with airway burns.' }
+                ],
+                CrowdCrush: [
+                    { type: 'severe', location: 'chest', desc: 'Traumatic asphyxia with petechiae.' },
+                    { type: 'critical', location: 'chest', desc: 'Unable to expand chest, severe respiratory distress.' },
+                    { type: 'fracture', location: 'leg', desc: 'Multiple rib fractures with respiratory compromise.' },
+                    { type: 'head', location: 'head', desc: 'Head trampling injury.' }
+                ],
+                Chemical: [
+                    { type: 'critical', location: 'chest', desc: 'Respiratory distress with bronchospasm.' },
+                    { type: 'burns', location: 'torso', desc: 'Chemical burns to exposed skin.' },
+                    { type: 'severe', location: 'chest', desc: 'Inhalational injury with stridor.' }
+                ],
+                Fire: [
+                    { type: 'burns', location: 'torso', desc: 'Extensive burns to chest and arms.' },
+                    { type: 'critical', location: 'chest', desc: 'Smoke inhalation with respiratory distress.' },
+                    { type: 'severe', location: 'chest', desc: 'Airway burns with singed nasal hairs.' },
+                    { type: 'fracture', location: 'leg', desc: 'Jump injury with bilateral calcaneal fractures.' }
+                ],
+                MTFA: [
+                    { type: 'penetrating', location: 'chest', desc: 'Gunshot wound to chest with sucking wound.' },
+                    { type: 'penetrating', location: 'abdomen', desc: 'Gunshot wound to abdomen with evisceration.' },
+                    { type: 'bleeding', location: 'leg', desc: 'Catastrophic arterial bleeding from leg wound.' },
+                    { type: 'severe', location: 'chest', desc: 'Multiple penetrating torso injuries.' }
+                ]
+            };
+
+            return [...baseInjuries, ...(incidentSpecific[incidentType] || [])];
+        };
+
+        const getMinorInjuryDescription = (incidentType) => {
+            const descriptions = {
+                RTC: ["Minor whiplash with neck pain but mobile.", "Superficial lacerations from broken glass.", "Complaining of chest pain from seatbelt but walking."],
+                Train: ["Shaken with minor bruising from being thrown.", "Scalp laceration but alert and mobile.", "Twisted ankle but able to weight bear."],
+                Blast: ["Hearing loss and disorientation but ambulant.", "Minor flash burns to face and hands.", "Blast-related tinnitus but otherwise well."],
+                BuildingCollapse: ["Dust inhalation with coughing but mobile.", "Minor cuts from debris but walking.", "Frightened but no significant injuries."],
+                IndustrialExplosion: ["Superficial burns to hands but mobile.", "Flash burns to face, walking away.", "Coughing from smoke but ambulant."],
+                CrowdCrush: ["Bruising and minor soft tissue injuries.", "Breathless but recovering and mobile.", "Minor trampling injuries but walking."],
+                Chemical: ["Mild respiratory irritation but ambulant.", "Eye irritation with lacrimation.", "Skin exposure with erythema, walking."],
+                Fire: ["Minor smoke inhalation, ambulant.", "Superficial burns to hands.", "Coughing but walking away from scene."],
+                MTFA: ["Minor laceration from debris, mobile.", "Psychological distress but no physical injuries.", "Minor soft tissue injury but walking."],
+                HGV: ["Minor bruising but fully mobile.", "Superficial cuts from debris.", "Shaken but no significant injuries."]
+            };
+            const defaults = ["Appears shaken with minor lacerations.", "Complaining of pain but is mobile.", "Walking wounded with minor injuries."];
+            const options = descriptions[incidentType] || defaults;
+            return pickRandom(options);
+        };
+
+        const getEntrapmentDescription = (incidentType) => {
+            const descriptions = {
+                RTC: "Trapped in vehicle wreckage, alert but unable to move lower limbs.",
+                Train: "Pinned by carriage debris, complaining of severe back pain.",
+                Blast: "Trapped under rubble, alert and talking but cannot move.",
+                BuildingCollapse: "Buried under debris from waist down, alert and responsive.",
+                IndustrialExplosion: "Trapped by fallen machinery, conscious but immobile.",
+                CrowdCrush: "Was on the ground being crushed, now freed but cannot feel legs.",
+                HGV: "Pinned between vehicles, alert but severe pain on movement.",
+                Fire: "Rescued from collapsed floor, suspected spinal injury.",
+                Chemical: "Collapsed and unable to move, alert but weak.",
+                MTFA: "Taking cover, unable to move due to suspected spinal injury."
+            };
+            return descriptions[incidentType] || "Complaining of severe back pain and cannot feel legs.";
         };
         
         const calculateCorrectTst = (c) => {
@@ -565,7 +687,9 @@
 
                 switch(injury.type) {
                     case 'penetrating':
+                    case 'severe':
                     case 'head': 
+                    case 'critical':
                     case 'burns':
                         markers += `<circle cx="${finalX}" cy="${pos.y}" r="${5 * scale}" fill="#ef4444" stroke="black" stroke-width="${strokeWidth / 2}"/>`;
                         break;
@@ -573,6 +697,7 @@
                         markers += `<path d="M ${finalX - (5 * scale)} ${pos.y} Q ${finalX} ${pos.y + (15 * scale)}, ${finalX + (5 * scale)} ${pos.y} Z" fill="#ef4444"/>`;
                         break;
                     case 'fracture':
+                    case 'moderate':
                          markers += `<text x="${finalX - (5 * scale)}" y="${pos.y + (5 * scale)}" font-weight="bold" font-size="${16 * scale}px">#</text>`;
                         break;
                 }
@@ -586,7 +711,7 @@
                         <circle cx="5" cy="5" r="5" fill="#ef4444"></circle>
                         <text x="15" y="9">
                             <tspan>Penetrating/</tspan>
-                            <tspan x="15" dy="10">Head/Burn</tspan>
+                            <tspan x="15" dy="10">Severe/Burn</tspan>
                         </text>
                         <path d="M 5 35 Q 10 50, 15 35 Z" fill="#ef4444"></path>
                         <text x="25" y="43">Bleeding</text>
@@ -686,7 +811,8 @@
         const startSimulation = () => {
             const incidentType = incidentTypeSelect.value;
             const casualtyCount = parseInt(casualtyCountInput.value) || 0;
-            const report = generateMethaneReport(incidentType, parseInt(vehicleCountInput.value), casualtyCount);
+            const vehicleCount = vehicleIncidents.includes(incidentType) ? parseInt(vehicleCountInput.value) : 0;
+            const report = generateMethaneReport(incidentType, vehicleCount, casualtyCount);
             
             methaneReport.innerHTML = `<p><strong>M</strong>ajor Incident: <strong>Declared</strong></p><p><strong>E</strong>xact Location: <strong>${report.location}</strong></p><p><strong>T</strong>ype of Incident: <strong>${report.type}</strong></p><p><strong>H</strong>azards: <strong>${report.hazards}</strong></p><p><strong>A</strong>ccess: <strong>${report.access}</strong></p><p><strong>N</strong>umber of Casualties: Approx. <strong>${casualtyCount}</strong></p><p><strong>E</strong>mergency Services: <strong>Fire & Rescue on scene. Ambulance and Police en route.</strong></p>`;
             
@@ -699,8 +825,23 @@
                     casualties.push(casualty);
                 } catch (e) { console.error(`Error generating casualty #${i}:`, e); }
             }
-             simTitle.textContent = `${incidentType.replace(/([A-Z])/g, ' $1').trim()}`;
-             simSubtitle.textContent = `${casualtyCount} casualties reported.`;
+            
+            // Generate title without vehicle numbers for non-vehicle incidents
+            const incidentNames = {
+                RTC: 'Road Traffic Collision',
+                Train: 'Train Crash',
+                HGV: 'HGV Incident',
+                Blast: 'Blast Incident',
+                BuildingCollapse: 'Building Collapse',
+                IndustrialExplosion: 'Industrial Explosion',
+                CrowdCrush: 'Stadium/Crowd Crush',
+                Chemical: 'Chemical Incident (CBRN)',
+                Fire: 'Major Fire',
+                MTFA: 'Marauding Terrorist Firearms Attack'
+            };
+            
+            simTitle.textContent = incidentNames[incidentType] || incidentType;
+            simSubtitle.textContent = `${casualtyCount} casualties reported.`;
             
             let systemText = "";
             if (triageSystem === 'tst_mitt') systemText = "TST & MITT";
@@ -735,10 +876,69 @@
         };
 
         const generateMethaneReport = (incidentType, vehicleCount, casualtyCount) => {
-            const locations = { RTC: "Junction 15, M1 Motorway", Train: "Watford West Station", HGV: "A41 Industrial Estate", Chemical: "Borehamwood Chemical Plant", Fire: "Elstree High Rise Tower", MTFA: "Central London Shopping Arcade" };
-            const hazards = { RTC: "Fuel spillage, unstable vehicles, sharp debris.", Train: "Overhead power lines, structural damage, panicked crowds.", HGV: "Unidentified cargo, risk of fire, vehicle instability.", Chemical: "Toxic plume (wind from North), risk of explosion.", Fire: "Smoke logging, structural collapse, falling debris.", MTFA: "Active shooter threat, potential IEDs." };
-            const accessPoints = { RTC: "Southbound carriageway is closed, access via slip road.", Train: "Main station entrance blocked, use rear service entrance.", HGV: "Approach from east, upwind of incident.", Chemical: "Cordon in place, entry via RVP only.", Fire: "Access from North street, South street blocked.", MTFA: "Police cordon in place, await instruction." };
-            return { location: locations[incidentType], type: `${vehicleCount}-vehicle ${incidentType}`, hazards: hazards[incidentType], access: accessPoints[incidentType] };
+            const locations = { 
+                RTC: "Junction 15, M1 Motorway", 
+                Train: "Watford West Station", 
+                HGV: "A41 Industrial Estate", 
+                Blast: "Central Shopping District, High Street",
+                BuildingCollapse: "Residential Tower Block, Queensway",
+                IndustrialExplosion: "Chemical Processing Plant, Industrial Park",
+                CrowdCrush: "Wembley Stadium, North Stand",
+                Chemical: "Borehamwood Chemical Plant", 
+                Fire: "Elstree High Rise Tower", 
+                MTFA: "Central London Shopping Arcade" 
+            };
+            
+            const hazards = { 
+                RTC: "Fuel spillage, unstable vehicles, sharp debris.", 
+                Train: "Overhead power lines, structural damage, panicked crowds.", 
+                HGV: "Unidentified cargo, risk of fire, vehicle instability.", 
+                Blast: "Secondary device risk, structural instability, glass and debris hazards.",
+                BuildingCollapse: "Ongoing structural collapse, dust cloud, trapped casualties, utilities exposed.",
+                IndustrialExplosion: "Toxic fumes, fire risk, secondary explosions possible, chemical exposure.",
+                CrowdCrush: "Panicked crowd, ongoing crush risk, crowd surge potential.",
+                Chemical: "Toxic plume (wind from North), risk of explosion.", 
+                Fire: "Smoke logging, structural collapse, falling debris.", 
+                MTFA: "Active shooter threat, potential IEDs." 
+            };
+            
+            const accessPoints = { 
+                RTC: "Southbound carriageway is closed, access via slip road.", 
+                Train: "Main station entrance blocked, use rear service entrance.", 
+                HGV: "Approach from east, upwind of incident.",
+                Blast: "Cordon established 200m radius, approach via North Road RVP.",
+                BuildingCollapse: "Access from West Street only, East side unstable.",
+                IndustrialExplosion: "Upwind approach mandatory, RVP at main gate.",
+                CrowdCrush: "Multiple access points via steward gates, avoid main concourse.",
+                Chemical: "Cordon in place, entry via RVP only.", 
+                Fire: "Access from North street, South street blocked.", 
+                MTFA: "Police cordon in place, await instruction." 
+            };
+
+            let typeDescription = "";
+            if (vehicleCount > 0) {
+                const vehicleLabel = incidentType === 'Train' ? 'carriage' : 'vehicle';
+                typeDescription = `${vehicleCount}-${vehicleLabel} ${incidentType}`;
+            } else {
+                const incidentNames = {
+                    Blast: 'Blast incident',
+                    BuildingCollapse: 'Building collapse',
+                    IndustrialExplosion: 'Industrial explosion',
+                    CrowdCrush: 'Crowd crush event',
+                    HGV: 'HGV collision',
+                    Chemical: 'Chemical incident (CBRN)',
+                    Fire: 'Major fire',
+                    MTFA: 'Marauding terrorist firearms attack'
+                };
+                typeDescription = incidentNames[incidentType] || incidentType;
+            }
+
+            return { 
+                location: locations[incidentType], 
+                type: typeDescription, 
+                hazards: hazards[incidentType], 
+                access: accessPoints[incidentType] 
+            };
         };
         
         const endSimulation = () => {
@@ -849,73 +1049,86 @@
             } else { // Test Mode
                 tstSection.classList.add('hidden'); testSection.classList.remove('hidden');
                 testSectionTitle.textContent = title;
-                document.querySelector('[data-triage-choice="p2"]').style.display = '';
             }
-        }
-
-        const showResult = (priority, reason) => {
-            if (currentPhase === 'tst') { currentCasualty.userTstTriage = priority; } 
-            else { currentCasualty.userMittTriage = priority; }
-            
-            resultTag.className = `mx-auto w-fit priority-tag text-lg px-6 py-2 ${getTagColor(priority)}`;
-            resultTag.textContent = priority.toUpperCase(); resultReason.textContent = reason;
-            
-            const correctTriage = (triageSystem === 'tst' || currentPhase === 'tst') ? currentCasualty.correctTst : currentCasualty.correctMitt;
-            const isCorrect = priority === correctTriage;
-
-            if (isCorrect) {
-                correctnessFeedback.textContent = 'Correct!';
-                feedbackSection.className = 'mt-4 text-left p-3 rounded-lg bg-green-100';
-                correctnessFeedback.className = 'font-bold text-lg feedback-correct';
-                feedbackExplanation.innerHTML = '';
-            } else {
-                correctnessFeedback.textContent = `Incorrect. Correct triage is ${correctTriage.toUpperCase()}.`;
-                feedbackSection.className = 'mt-4 text-left p-3 rounded-lg bg-red-100';
-                correctnessFeedback.className = 'font-bold text-lg feedback-incorrect';
-                const isMittExplanation = currentPhase === 'mitt';
-                feedbackExplanation.innerHTML = isMittExplanation ? generateMittExplanation(currentCasualty) : generateTstExplanation(currentCasualty);
-            }
-
-            tstSection.classList.add('hidden');
-            testSection.classList.add('hidden');
-            resultSection.classList.remove('hidden');
-        }
-
-        const generateTstExplanation = (c) => {
-            let exp = '<p class="font-semibold">TST Pathway:</p>';
-            if (c.canWalk) { exp += '<div><span class="font-bold">1. Walk?</span> YES &rarr; <strong class="text-green-700">P3</strong></div>'; return exp; }
-            exp += '<div><span class="font-bold">1. Walk?</span> NO &rarr; Continue.</div>';
-            if (c.hasSevereBleeding) { exp += '<div><span class="font-bold">2. Severe Bleeding?</span> YES &rarr; <strong class="text-red-700">P1</strong></div>'; return exp; }
-            exp += '<div><span class="font-bold">2. Severe Bleeding?</span> NO &rarr; Continue.</div>';
-            if (c.isTalking) {
-                exp += '<div><span class="font-bold">3. Talking?</span> YES &rarr; Check penetrating injury.</div>';
-                exp += c.hasPenetratingInjury ? '<div><span class="font-bold">4. Penetrating Injury?</span> YES &rarr; <strong class="text-red-700">P1</strong></div>' : '<div><span class="font-bold">4. Penetrating Injury?</span> NO &rarr; <strong class="text-amber-700">P2</strong></div>';
-                return exp;
-            }
-            exp += '<div><span class="font-bold">3. Talking?</span> NO &rarr; Check breathing.</div>';
-            if (!c.isBreathing && !c.airwayClears) { exp += `<div><span class="font-bold">4. Breathing?</span> NO &rarr; Airway... Not Breathing &rarr; <strong class="text-gray-800">DECEASED</strong></div>`; return exp; }
-            exp += '<div><span class="font-bold">4. Breathing?</span> YES (or restored) &rarr; <strong class="text-red-700">P1</strong></div>';
-            return exp;
         };
 
-        const generateMittExplanation = (c) => {
-            let exp = '<p class="font-semibold">MITT Pathway:</p>';
-            if (c.hasCatastrophicBleeding) { exp += '<div><span class="font-bold">1. Cat. Bleeding?</span> YES &rarr; <strong class="text-red-700">P1</strong></div>'; return exp; }
-            exp += '<div><span class="font-bold">1. Cat. Bleeding?</span> NO &rarr; Continue.</div>';
-            if (c.canWalk) { exp += '<div><span class="font-bold">2. Walk?</span> YES &rarr; <strong class="text-green-700">P3</strong></div>'; return exp; }
-            exp += '<div><span class="font-bold">2. Walk?</span> NO &rarr; Continue.</div>';
-            if (!c.isBreathing && !c.airwayClears) { exp += `<div><span class="font-bold">3. Breathing?</span> NO &rarr; Airway... Not Breathing &rarr; <strong class="text-gray-800">DECEASED</strong></div>`; return exp; }
+        const showResult = (priority, reason) => {
+            resultSection.classList.remove('hidden');
+            tstSection.classList.add('hidden');
+            testSection.classList.add('hidden');
+            
+            resultTag.textContent = priority.toUpperCase();
+            resultTag.className = `mx-auto w-fit priority-tag text-lg px-6 py-2 ${priority}`;
+            resultReason.textContent = reason;
+
+            const currentPhaseData = currentPhase === 'tst' ? { correct: currentCasualty.correctTst, userProp: 'userTstTriage', explain: explainTst } : { correct: currentCasualty.correctMitt, userProp: 'userMittTriage', explain: explainMitt };
+            
+            // Only set the triage value if it's the first attempt for this phase
+            if (!currentCasualty[currentPhaseData.userProp]) {
+                currentCasualty[currentPhaseData.userProp] = priority;
+            }
+
+            const isCorrect = priority === currentPhaseData.correct;
+            if (currentMode === 'teach') {
+                if (isCorrect) {
+                    correctnessFeedback.textContent = '✓ Correct Triage';
+                    correctnessFeedback.className = 'font-bold text-lg feedback-correct';
+                    feedbackSection.className = 'mt-4 text-left p-3 rounded-lg bg-green-100 border border-green-300';
+                } else {
+                    correctnessFeedback.textContent = '✗ Incorrect Triage';
+                    correctnessFeedback.className = 'font-bold text-lg feedback-incorrect';
+                    feedbackSection.className = 'mt-4 text-left p-3 rounded-lg bg-red-100 border border-red-300';
+                    feedbackExplanation.innerHTML = `<p class="font-semibold text-sm mb-1">The correct answer is <strong>${currentPhaseData.correct.toUpperCase()}</strong>. Here's why:</p>` + currentPhaseData.explain(currentCasualty);
+                }
+                feedbackSection.classList.remove('hidden');
+            } else {
+                feedbackSection.classList.add('hidden');
+            }
+        };
+
+        const explainTst = (c) => {
+            let exp = '<div class="space-y-1 text-sm">';
+            if (c.canWalk) { exp += '<div><span class="font-bold">1. Can Walk?</span> YES &rarr; <strong class="text-green-700">P3</strong></div>'; return exp + '</div>'; }
+            exp += '<div><span class="font-bold">1. Can Walk?</span> NO &rarr; Continue.</div>';
+            if (c.hasSevereBleeding) { exp += '<div><span class="font-bold">2. Severe Bleeding?</span> YES &rarr; <strong class="text-red-700">P1</strong></div>'; return exp + '</div>'; }
+            exp += '<div><span class="font-bold">2. Severe Bleeding?</span> NO &rarr; Continue.</div>';
+            if (c.isTalking) { 
+                exp += '<div><span class="font-bold">3. Talking?</span> YES &rarr; Continue.</div>';
+                if (c.hasPenetratingInjury) { exp += '<div><span class="font-bold">4. Penetrating Torso Injury?</span> YES &rarr; <strong class="text-red-700">P1</strong></div>'; return exp + '</div>'; }
+                exp += '<div><span class="font-bold">4. Penetrating Torso Injury?</span> NO &rarr; <strong class="text-amber-700">P2</strong></div>'; return exp + '</div>';
+            }
+            exp += '<div><span class="font-bold">3. Talking?</span> NO &rarr; Continue.</div>';
+            if (!c.isBreathing) {
+                exp += '<div><span class="font-bold">4. Breathing?</span> NO (Initially) &rarr; Open airway.</div>';
+                if (c.airwayClears) { exp += '<div><span class="font-bold">5. Now Breathing?</span> YES &rarr; <strong class="text-red-700">P1</strong></div>'; return exp + '</div>'; }
+                exp += '<div><span class="font-bold">5. Now Breathing?</span> NO &rarr; <strong class="text-gray-700">DECEASED</strong></div>'; return exp + '</div>';
+            }
+            exp += '<div><span class="font-bold">4. Breathing?</span> YES &rarr; <strong class="text-red-700">P1</strong></div>';
+            return exp + '</div>';
+        };
+
+        const explainMitt = (c) => {
+            let exp = '<div class="space-y-1 text-sm">';
+            if (c.hasCatastrophicBleeding) { exp += '<div><span class="font-bold">1. Catastrophic Bleeding?</span> YES &rarr; <strong class="text-red-700">P1</strong></div>'; return exp + '</div>'; }
+            exp += '<div><span class="font-bold">1. Catastrophic Bleeding?</span> NO &rarr; Continue.</div>';
+            if (c.canWalk) { exp += '<div><span class="font-bold">2. Can Walk?</span> YES &rarr; <strong class="text-green-700">P3</strong></div>'; return exp + '</div>'; }
+            exp += '<div><span class="font-bold">2. Can Walk?</span> NO &rarr; Continue.</div>';
+            if (!c.isBreathing) {
+                exp += '<div><span class="font-bold">3. Breathing?</span> NO (Initially) &rarr; Open airway.</div>';
+                if (c.airwayClears) { exp += '<div><span class="font-bold">&rarr; Now Breathing?</span> YES &rarr; <strong class="text-red-700">P1</strong></div>'; return exp + '</div>'; }
+                exp += '<div><span class="font-bold">&rarr; Now Breathing?</span> NO &rarr; <strong class="text-gray-700">DECEASED</strong></div>'; return exp + '</div>';
+            }
             exp += '<div><span class="font-bold">3. Breathing?</span> YES (or restored) &rarr; Continue.</div>';
             const respondsToVoice = c.conscious === 'Alert' || c.conscious === 'Voice';
-            if (!respondsToVoice) { exp += `<div><span class="font-bold">4. Responds to Voice?</span> NO &rarr; <strong class="text-red-700">P1</strong></div>`; return exp; }
+            if (!respondsToVoice) { exp += `<div><span class="font-bold">4. Responds to Voice?</span> NO &rarr; <strong class="text-red-700">P1</strong></div>`; return exp + '</div>'; }
             exp += '<div><span class="font-bold">4. Responds to Voice?</span> YES &rarr; Continue.</div>';
-            if (c.age <= 2) { exp += '<div><span class="font-bold">5. Age > 2?</span> NO &rarr; <strong class="text-red-700">P1</strong></div>'; return exp; }
+            if (c.age <= 2) { exp += '<div><span class="font-bold">5. Age > 2?</span> NO &rarr; <strong class="text-red-700">P1</strong></div>'; return exp + '</div>'; }
             exp += '<div><span class="font-bold">5. Age > 2?</span> YES &rarr; Continue.</div>';
-            if (c.resps < 12 || c.resps > 23) { exp += `<div><span class="font-bold">6. RR 12-23?</span> NO (${c.resps}) &rarr; <strong class="text-red-700">P1</strong></div>`; return exp; }
+            if (c.resps < 12 || c.resps > 23) { exp += `<div><span class="font-bold">6. RR 12-23?</span> NO (${c.resps}) &rarr; <strong class="text-red-700">P1</strong></div>`; return exp + '</div>'; }
             exp += `<div><span class="font-bold">6. RR 12-23?</span> YES (${c.resps}) &rarr; Continue.</div>`;
-            if (c.pulse < 60 || c.pulse > 119) { exp += `<div><span class="font-bold">7. HR 60-119?</span> NO (${c.pulse}) &rarr; <strong class="text-amber-700">P2</strong></div>`; return exp; }
+            if (c.pulse < 60 || c.pulse > 119) { exp += `<div><span class="font-bold">7. HR 60-119?</span> NO (${c.pulse}) &rarr; <strong class="text-amber-700">P2</strong></div>`; return exp + '</div>'; }
             exp += `<div><span class="font-bold">7. HR 60-119?</span> YES (${c.pulse}) &rarr; <strong class="text-amber-700">P2</strong></div>`;
-            return exp;
+            return exp + '</div>';
         };
 
         const deteriorateCasualty = () => {
